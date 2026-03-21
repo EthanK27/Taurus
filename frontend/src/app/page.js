@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
     ArrowUp,
+    LoaderCircle,
     Menu,
     MessageSquare,
     Plus,
@@ -27,6 +28,72 @@ const historyItems = [
 export default function Home() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [prompt, setPrompt] = useState("");
+    const [messages, setMessages] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState("");
+
+    async function handleSubmit(event) {
+        event?.preventDefault();
+
+        const trimmedPrompt = prompt.trim();
+        if (!trimmedPrompt || isSubmitting) {
+            return;
+        }
+
+        const userMessage = {
+            id: crypto.randomUUID(),
+            role: "user",
+            content: trimmedPrompt,
+        };
+
+        setMessages((current) => [...current, userMessage]);
+        setPrompt("");
+        setError("");
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch("/api/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    prompt: trimmedPrompt,
+                    model: "gemini-2.5-flash",
+                }),
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok) {
+                throw new Error(payload?.error || "Request failed.");
+            }
+
+            setMessages((current) => [
+                ...current,
+                {
+                    id: crypto.randomUUID(),
+                    role: "assistant",
+                    content: payload.answer || "No response returned.",
+                },
+            ]);
+        } catch (submissionError) {
+            setError(
+                submissionError instanceof Error
+                    ? submissionError.message
+                    : "Something went wrong while sending the prompt."
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    function startNewChat() {
+        setMessages([]);
+        setPrompt("");
+        setError("");
+        setSidebarOpen(false);
+    }
 
     return (
         <AppShell
@@ -61,7 +128,10 @@ export default function Home() {
                     </button>
                 </div>
 
-                <button className="mb-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-blue-300/15 bg-blue-400/10 text-sm font-medium text-blue-100 transition hover:bg-blue-400/14">
+                <button
+                    onClick={startNewChat}
+                    className="mb-6 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-blue-200/18 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.22),transparent_34%),linear-gradient(180deg,rgba(80,127,255,0.92),rgba(53,104,241,0.88))] text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_14px_28px_rgba(37,99,235,0.28)] transition hover:brightness-105"
+                >
                     <Plus className="size-4" />
                     New chat
                 </button>
@@ -70,7 +140,7 @@ export default function Home() {
                     {historyItems.map((item) => (
                         <button
                             key={item}
-                            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
+                            className="flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(88,133,255,0.14),transparent_30%),linear-gradient(180deg,rgba(30,43,73,0.76),rgba(18,24,39,0.7))] px-4 py-3 text-left text-sm text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-white/12 hover:text-white"
                         >
                             <MessageSquare className="size-4 text-slate-500" />
                             <span className="truncate">{item}</span>
@@ -90,7 +160,7 @@ export default function Home() {
             <section className="flex flex-1 items-center justify-center px-4 pb-10 pt-4 sm:px-6">
                 <div className="w-full max-w-3xl">
                     <div className="mb-10 text-center">
-                        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-300/12 bg-blue-300/8 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/70 backdrop-blur-xl">
+                        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-200/16 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_36%),linear-gradient(180deg,rgba(40,56,95,0.76),rgba(20,28,47,0.72))] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl">
                             <span className="size-2 rounded-full bg-blue-300 shadow-[0_0_14px_rgba(96,165,250,0.8)]" />
                             AI Trading Strategy Builder
                         </p>
@@ -105,20 +175,76 @@ export default function Home() {
                         </p>
                     </div>
 
-                    <div className="glass-panel mx-auto max-w-2xl p-3 sm:p-4">
-                        <div className="flex items-end gap-3 rounded-[26px] border border-white/6 bg-white/3 px-4 py-4 backdrop-blur-2xl sm:px-5">
+                    {messages.length > 0 && (
+                        <div className="mb-6 space-y-4">
+                            {messages.map((message) => (
+                                <article
+                                    key={message.id}
+                                    className={`glass-panel p-4 sm:p-5 ${message.role === "user"
+                                            ? "border-blue-200/16 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.2),transparent_34%),linear-gradient(180deg,rgba(36,58,110,0.92),rgba(21,32,55,0.92))]"
+                                            : ""
+                                        }`}
+                                >
+                                    <div className="mb-2 text-[11px] font-mono uppercase tracking-[0.28em] text-blue-100/60">
+                                        {message.role === "user" ? "You" : "Taurus"}
+                                    </div>
+                                    <p className="whitespace-pre-wrap text-sm leading-7 text-slate-100 sm:text-base">
+                                        {message.content}
+                                    </p>
+                                </article>
+                            ))}
+
+                            {isSubmitting && (
+                                <div className="glass-panel flex items-center gap-3 p-4 text-sm text-slate-300 sm:p-5">
+                                    <LoaderCircle className="size-4 animate-spin text-blue-200" />
+                                    Taurus is thinking through that request...
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <form
+                        onSubmit={handleSubmit}
+                        className="glass-panel mx-auto max-w-2xl p-3 sm:p-4"
+                    >
+                        <div className="flex items-end gap-3 rounded-[26px] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(92,138,255,0.12),transparent_32%),linear-gradient(180deg,rgba(29,42,71,0.56),rgba(18,24,37,0.46))] px-4 py-4 backdrop-blur-2xl sm:px-5">
                             <textarea
                                 rows={3}
                                 value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
+                                onChange={(event) => setPrompt(event.target.value)}
                                 placeholder="Describe your strategy in plain English..."
                                 className="min-h-24 flex-1 resize-none bg-transparent pt-2 text-base text-white outline-none placeholder:text-slate-400 sm:text-lg"
+                                disabled={isSubmitting}
+                                onKeyDown={(event) => {
+                                    if (
+                                        event.key === "Enter" &&
+                                        !event.shiftKey &&
+                                        !isSubmitting
+                                    ) {
+                                        event.preventDefault();
+                                        handleSubmit(event);
+                                    }
+                                }}
                             />
-                            <button className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-400 text-slate-950 shadow-[0_0_30px_rgba(96,165,250,0.35)] transition hover:bg-blue-300">
-                                <ArrowUp className="size-5" />
+                            <button
+                                type="submit"
+                                disabled={!prompt.trim() || isSubmitting}
+                                className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-blue-200/20 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.26),transparent_35%),linear-gradient(180deg,#74a8ff_0%,#4f86ff_55%,#3d70ea_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.26),0_0_30px_rgba(96,165,250,0.35)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                                aria-label="Send prompt"
+                            >
+                                {isSubmitting ? (
+                                    <LoaderCircle className="size-5 animate-spin" />
+                                ) : (
+                                    <ArrowUp className="size-5" />
+                                )}
                             </button>
                         </div>
-                    </div>
+                        {error && (
+                            <p className="px-2 pt-3 text-sm text-rose-300">
+                                {error}
+                            </p>
+                        )}
+                    </form>
 
                     <div className="mx-auto mt-6 grid max-w-3xl gap-3 sm:grid-cols-2">
                         {suggestions.map((item) => (
@@ -126,11 +252,10 @@ export default function Home() {
                                 key={item}
                                 type="button"
                                 onClick={() => setPrompt(item)}
-                                className="rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-left text-sm leading-6 text-slate-300 backdrop-blur-xl transition hover:bg-white/7 hover:text-white"
+                                className="rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(92,138,255,0.14),transparent_30%),linear-gradient(180deg,rgba(31,44,74,0.82),rgba(18,24,39,0.78))] px-4 py-4 text-left text-sm leading-6 text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition hover:border-white/14 hover:text-white"
                             >
                                 {item}
                             </button>
-
                         ))}
                     </div>
                 </div>
