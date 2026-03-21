@@ -29,7 +29,18 @@ export default function Home() {
     const [prompt, setPrompt] = useState("");
 
     return (
-        <AppShell activePath="/">
+        <AppShell
+            activePath="/"
+            headerLeft={
+                <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="glass-icon"
+                    aria-label="Open sidebar"
+                >
+                    <Menu className="size-5" />
+                </button>
+            }
+        >
             <aside
                 className={`fixed inset-y-0 left-0 z-40 w-75 transform border-r border-white/10 bg-[#0b1423]/88 p-5 backdrop-blur-2xl transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
@@ -79,16 +90,6 @@ export default function Home() {
             <section className="flex flex-1 items-center justify-center px-4 pb-10 pt-4 sm:px-6">
                 <div className="w-full max-w-3xl">
                     <div className="mb-10 text-center">
-                        <div className="mb-4 flex justify-center">
-                            <button
-                                onClick={() => setSidebarOpen(true)}
-                                className="glass-icon"
-                                aria-label="Open sidebar"
-                            >
-                                <Menu className="size-5" />
-                            </button>
-                        </div>
-
                         <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-300/12 bg-blue-300/8 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/70 backdrop-blur-xl">
                             <span className="size-2 rounded-full bg-blue-300 shadow-[0_0_14px_rgba(96,165,250,0.8)]" />
                             AI Trading Strategy Builder

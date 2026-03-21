@@ -36,12 +36,12 @@ export default function GraphsPage() {
                                         Performance chart
                                     </h2>
                                 </div>
-                                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-slate-300">
+                                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
                                     Placeholder
                                 </span>
                             </div>
 
-                            <div className="flex min-h-[360px] items-center justify-center rounded-[28px] border border-dashed border-white/12 bg-slate-950/25 p-6 text-center text-sm text-slate-400">
+                            <div className="flex min-h-90 items-center justify-center rounded-[28px] border border-dashed border-white/12 bg-slate-950/25 p-6 text-center text-sm text-slate-400">
                                 Graph here
                             </div>
                         </section>
@@ -55,7 +55,7 @@ export default function GraphsPage() {
                             </h2>
 
                             <div className="mt-6 space-y-4">
-                                <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                                <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
                                     <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
                                         Overview
                                     </p>
@@ -64,7 +64,7 @@ export default function GraphsPage() {
                                     </p>
                                 </div>
 
-                                <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                                <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
                                     <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
                                         Metrics
                                     </p>
@@ -92,7 +92,7 @@ export default function GraphsPage() {
                     </div>
 
                     <section className="glass-panel overflow-hidden">
-                        <div className="flex items-center justify-between border-b border-white/8 bg-white/[0.04] px-6 py-4">
+                        <div className="flex items-center justify-between border-b border-white/8 bg-white/4 px-6 py-4">
                             <div>
                                 <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/60">
                                     Code
@@ -101,7 +101,7 @@ export default function GraphsPage() {
                                     Strategy
                                 </h2>
                             </div>
-                            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-slate-300">
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
                                 Can edit
                             </span>
                         </div>

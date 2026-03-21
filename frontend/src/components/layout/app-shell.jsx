@@ -6,7 +6,7 @@ const navItems = [
     { href: "/graphs", label: "Graphs" },
 ];
 
-export function AppShell({ children, activePath = "/" }) {
+export function AppShell({ children, activePath = "/", headerLeft }) {
     return (
         <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(68,112,255,0.16),transparent_28%),linear-gradient(180deg,#08111f_0%,#0a1424_45%,#0a1220_100%)] text-white">
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-size-[72px_72px] opacity-20" />
@@ -14,6 +14,7 @@ export function AppShell({ children, activePath = "/" }) {
             <div className="relative z-10 flex min-h-screen flex-col">
                 <header className="flex items-center justify-between px-5 py-5 sm:px-8">
                     <div className="flex items-center gap-3">
+                        {headerLeft}
                         <div className="flex items-center gap-2.5">
                             <Image
                                 src="/TaurusLogo.png"
@@ -29,7 +30,7 @@ export function AppShell({ children, activePath = "/" }) {
                         </div>
                     </div>
 
-                    <nav className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-xl">
+                    <nav className="flex items-center gap-2 rounded-full border border-white/10 bg-white/4 p-1 backdrop-blur-xl">
                         {navItems.map((item) => {
                             const isActive = activePath === item.href;
 
