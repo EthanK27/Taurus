@@ -1,12 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
-
-const placeholderBars = [
-    "Strategy A",
-    "Strategy B",
-    "Strategy C",
-    "Strategy D",
-    "Strategy E",
-];
+import { AlphaBarChart } from "@/components/graphs/alpha-bar-chart";
 
 export default function GraphsPage() {
     return (
@@ -30,24 +23,7 @@ export default function GraphsPage() {
                         </div>
 
                         <div className="mt-8 rounded-[30px] border border-white/6 bg-[linear-gradient(180deg,rgba(13,24,45,0.85),rgba(10,18,32,0.95))] p-5 sm:p-6">
-                            <div className="relative flex min-h-[430px] items-end gap-3 overflow-x-auto rounded-[24px] pb-14 pt-10 sm:gap-4">
-                                <div className="pointer-events-none absolute inset-x-0 bottom-[42%] border-t border-dashed border-white/12" />
-                                <div className="pointer-events-none absolute right-0 bottom-[calc(42%+10px)] font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/45">
-                                    S&amp;P 500 Baseline
-                                </div>
-
-                                {placeholderBars.map((label) => (
-                                    <div
-                                        key={label}
-                                        className="flex min-w-[110px] flex-1 flex-col items-center justify-end gap-4 px-2 py-2"
-                                    >
-                                        <div className="h-[12%] w-full rounded-[20px_20px_12px_12px] border border-dashed border-blue-300/14 bg-blue-300/[0.05]" />
-                                        <span className="text-center text-xs uppercase tracking-[0.14em] text-blue-100/45">
-                                            {label}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
+                            <AlphaBarChart />
                         </div>
                     </section>
                 </div>
