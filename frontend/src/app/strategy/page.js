@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PnlPerformanceChart } from "@/components/graphs/pnl-performance-chart";
+import { StrategySummaryPanel } from "@/components/strategy/strategy-summary-panel";
 
 const codePlaceholder = `// Strategy code will appear here
 if (ethan smith) {
@@ -47,49 +48,7 @@ export default function StrategyPage() {
                             </div>
                         </section>
 
-                        <section className="glass-panel p-6 sm:p-8">
-                            <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/60">
-                                Summary
-                            </p>
-                            <h2 className="mt-3 text-2xl font-semibold text-white">
-                                Strategy notes
-                            </h2>
-
-                            <div className="mt-6 space-y-4">
-                                <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                                        Overview
-                                    </p>
-                                    <p className="mt-3 text-sm leading-7 text-slate-300">
-                                        placeholder
-                                    </p>
-                                </div>
-
-                                <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                                        Metrics
-                                    </p>
-                                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                                        <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                                                tbd
-                                            </p>
-                                            <p className="mt-2 text-2xl font-semibold text-white">
-                                                --
-                                            </p>
-                                        </div>
-                                        <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                                                tbd
-                                            </p>
-                                            <p className="mt-2 text-2xl font-semibold text-white">
-                                                --
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                        <StrategySummaryPanel />
                     </div>
 
                     <section className="glass-panel overflow-hidden">

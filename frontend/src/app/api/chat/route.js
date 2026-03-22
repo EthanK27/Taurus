@@ -45,6 +45,20 @@ function detectRunDirectory(beforeEntries, afterEntries) {
     return candidates[0].name;
 }
 
+function writeRunMetadata(outputsDir, runDirectory, payload) {
+    if (!runDirectory) {
+        return;
+    }
+
+    const runDirPath = path.join(outputsDir, runDirectory);
+    if (!fs.existsSync(runDirPath)) {
+        return;
+    }
+
+    const metadataPath = path.join(runDirPath, "run_metadata.json");
+    fs.writeFileSync(metadataPath, JSON.stringify(payload, null, 2), "utf-8");
+}
+
 function resolveBackendPaths() {
     const configuredDir = process.env.TAURUS_STRATEGY_BACKEND_DIR?.trim();
     if (configuredDir) {
@@ -213,9 +227,16 @@ async function getStrategyAnswer(prompt, model) {
         try {
             const answer = await runLocalAgent({ prompt, model, backendDir, runner });
             const afterEntries = listOutputDirectories(outputsDir);
+            const runDirectory = detectRunDirectory(beforeEntries, afterEntries);
+            writeRunMetadata(outputsDir, runDirectory, {
+                prompt,
+                answer,
+                model,
+                generatedAt: new Date().toISOString(),
+            });
             return {
                 answer,
-                runDirectory: detectRunDirectory(beforeEntries, afterEntries),
+                runDirectory,
             };
         } catch (error) {
             attempts.push(
