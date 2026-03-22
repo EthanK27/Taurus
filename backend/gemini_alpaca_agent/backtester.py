@@ -66,6 +66,7 @@ def _build_pnl_performance_log(
     equity_curve: pd.DataFrame,
     buy_hold_curve: pd.DataFrame,
     summary: dict[str, Any],
+    spy_curve: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     user_series = [
         {
@@ -74,7 +75,7 @@ def _build_pnl_performance_log(
         }
         for timestamp, row in equity_curve.iterrows()
     ]
-    benchmark_series = [
+    buy_hold_series = [
         {
             "timestamp": _format_chart_timestamp(timestamp),
             "pnl": round(float(row["equity"]), 2),
@@ -82,11 +83,24 @@ def _build_pnl_performance_log(
         for timestamp, row in buy_hold_curve.iterrows()
     ]
 
+    spy_series = []
+    if spy_curve is not None and len(spy_curve) > 0:
+        spy_series = [
+            {
+                "timestamp": _format_chart_timestamp(timestamp),
+                "pnl": round(float(row["equity"]), 2),
+            }
+            for timestamp, row in spy_curve.iterrows()
+        ]
+
     return {
         "generatedAt": pd.Timestamp.utcnow().isoformat(),
         "summary": summary,
         "userSeries": user_series,
-        "benchmarkSeries": benchmark_series,
+        "buyHoldSeries": buy_hold_series,
+        "spySeries": spy_series,
+        # Keep legacy key for existing consumers.
+        "benchmarkSeries": buy_hold_series,
     }
 
 
@@ -234,6 +248,7 @@ def save_backtest_report(
     output_dir: str | Path,
     prefix: str,
     run_directory_name: str,
+    spy_benchmark_curve: pd.DataFrame | None = None,
 ) -> dict[str, str]:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -259,7 +274,12 @@ def save_backtest_report(
     else:
         buy_hold_curve = pd.DataFrame(columns=["equity"])
 
-    pnl_log = _build_pnl_performance_log(result.equity_curve, buy_hold_curve, result.summary)
+    pnl_log = _build_pnl_performance_log(
+        result.equity_curve,
+        buy_hold_curve,
+        result.summary,
+        spy_curve=spy_benchmark_curve,
+    )
     pnl_log_path.write_text(json.dumps(pnl_log, indent=2), encoding="utf-8")
 
     return {

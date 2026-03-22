@@ -1,0 +1,12 @@
+{
+  "initial_cash": 10000.0,
+  "ending_equity": 20007.692608,
+  "num_bars": 4834,
+  "num_trades": 42,
+  "strategy_total_return_pct": 100.0769,
+  "buy_hold_return_pct": 149.6103,
+  "strategy_max_drawdown_pct": -30.3425,
+  "buy_hold_max_drawdown_pct": -30.7528,
+  "strategy_sharpe": 0.8585,
+  "buy_hold_sharpe": 1.0297
+}
