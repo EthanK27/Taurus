@@ -1,10 +1,10 @@
-import { AppShell } from "@/components/layout/app-shell";
+import { PythonCodeBlock } from "@/components/code/python-code-block";
 import { PnlPerformanceChart } from "@/components/graphs/pnl-performance-chart";
+import { AppShell } from "@/components/layout/app-shell";
+import { StrategySummaryPanel } from "@/components/strategy/strategy-summary-panel";
 
-const codePlaceholder = `// Strategy code will appear here
-if (ethan smith) {
-  return gay;
-}`;
+const strategyPlaceholder = `# Select a run from /graphs or create a new one from the home screen.
+# The selected graph page will load the matching generated Python strategy here.`;
 
 export default function StrategyPage() {
     return (
@@ -18,11 +18,11 @@ export default function StrategyPage() {
                         </p>
 
                         <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                            Graph
+                            Strategy Workspace
                         </h1>
 
                         <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
-                            Placeholder box
+                            Generate a run from the home screen or open one from Graphs to inspect its saved backtest and source.
                         </p>
                     </div>
 
@@ -38,7 +38,7 @@ export default function StrategyPage() {
                                     </h2>
                                 </div>
                                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-                                    Placeholder
+                                    Latest run
                                 </span>
                             </div>
 
@@ -47,49 +47,7 @@ export default function StrategyPage() {
                             </div>
                         </section>
 
-                        <section className="glass-panel p-6 sm:p-8">
-                            <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/60">
-                                Summary
-                            </p>
-                            <h2 className="mt-3 text-2xl font-semibold text-white">
-                                Strategy notes
-                            </h2>
-
-                            <div className="mt-6 space-y-4">
-                                <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                                        Overview
-                                    </p>
-                                    <p className="mt-3 text-sm leading-7 text-slate-300">
-                                        placeholder
-                                    </p>
-                                </div>
-
-                                <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                                        Metrics
-                                    </p>
-                                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                                        <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                                                tbd
-                                            </p>
-                                            <p className="mt-2 text-2xl font-semibold text-white">
-                                                --
-                                            </p>
-                                        </div>
-                                        <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                                                tbd
-                                            </p>
-                                            <p className="mt-2 text-2xl font-semibold text-white">
-                                                --
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                        <StrategySummaryPanel />
                     </div>
 
                     <section className="glass-panel overflow-hidden">
@@ -99,17 +57,15 @@ export default function StrategyPage() {
                                     Code
                                 </p>
                                 <h2 className="mt-2 text-xl font-semibold text-white">
-                                    Strategy
+                                    Strategy source
                                 </h2>
                             </div>
                             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-                                Can edit
+                                Read-only
                             </span>
                         </div>
 
-                        <pre className="overflow-x-auto bg-slate-950/45 px-6 py-6 font-mono text-sm leading-7 text-slate-300">
-                            <code>{codePlaceholder}</code>
-                        </pre>
+                        <PythonCodeBlock code={strategyPlaceholder} filename="strategy.py" />
                     </section>
                 </div>
             </section>

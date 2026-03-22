@@ -354,6 +354,199 @@
       padding: 1rem;
     }
 
+    .code-block {
+      background:
+        linear-gradient(180deg, rgba(4, 9, 20, 0.92), rgba(9, 16, 30, 0.96));
+    }
+
+    .code-block__meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      background: rgba(15, 23, 42, 0.42);
+    }
+
+    .code-block__meta--interactive {
+      justify-content: space-between;
+    }
+
+    .code-block__meta-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .code-block__meta-group--actions {
+      justify-content: flex-end;
+    }
+
+    .code-block__meta-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      border: 1px solid rgba(125, 211, 252, 0.22);
+      background: rgba(14, 116, 144, 0.14);
+      color: rgba(186, 230, 253, 0.92);
+      font-family: var(--font-plex-mono), monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      padding: 0.28rem 0.58rem;
+      text-transform: uppercase;
+    }
+
+    .code-block__meta-name {
+      color: rgba(226, 232, 240, 0.84);
+      font-family: var(--font-plex-mono), monospace;
+      font-size: 0.84rem;
+    }
+
+    .code-block__pre {
+      margin: 0;
+      overflow-x: auto;
+      padding: 1.35rem 1.5rem 1.5rem;
+      color: #dbeafe;
+      font-family: var(--font-plex-mono), monospace;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      tab-size: 4;
+    }
+
+    .code-block__code {
+      display: block;
+      min-width: max-content;
+      white-space: pre;
+    }
+
+    .code-block__status {
+      color: rgba(191, 219, 254, 0.84);
+      font-family: var(--font-plex-mono), monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .code-editor__surface {
+      position: relative;
+      min-height: 420px;
+      background: rgba(2, 6, 23, 0.22);
+      cursor: text;
+      overflow: hidden;
+    }
+
+    .code-editor__highlight {
+      position: relative;
+      z-index: 1;
+      min-height: 420px;
+      pointer-events: none;
+    }
+
+    .code-editor__textarea {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 2;
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+      box-sizing: border-box;
+      border: 0;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.025);
+      caret-color: #e2e8f0;
+      resize: none;
+      overflow: auto;
+      padding: 1.35rem 1.5rem 1.5rem;
+      font-family: var(--font-plex-mono), monospace;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      tab-size: 4;
+      white-space: pre;
+      outline: none;
+    }
+
+    .code-editor__textarea::selection {
+      background: rgba(125, 211, 252, 0.25);
+    }
+
+    .code-editor__footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.14);
+      padding: 0.9rem 1.25rem 1rem;
+      background: rgba(15, 23, 42, 0.28);
+    }
+
+    .code-editor__hint {
+      color: rgba(148, 163, 184, 0.86);
+      font-size: 0.82rem;
+    }
+
+    .code-editor__message {
+      color: rgba(191, 219, 254, 0.92);
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+
+    .code-editor__stderr {
+      margin: 1rem 1.25rem 1.25rem;
+      border-radius: 18px;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      background: rgba(69, 10, 10, 0.32);
+      overflow: hidden;
+    }
+
+    .code-editor__stderr-label {
+      padding: 0.7rem 0.95rem;
+      border-bottom: 1px solid rgba(248, 113, 113, 0.22);
+      color: rgba(254, 202, 202, 0.95);
+      font-family: var(--font-plex-mono), monospace;
+      font-size: 0.74rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .code-editor__stderr-pre {
+      margin: 0;
+      overflow-x: auto;
+      padding: 0.95rem;
+      color: rgba(254, 226, 226, 0.95);
+      font-family: var(--font-plex-mono), monospace;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .code-token--comment {
+      color: #7c8aa5;
+      font-style: italic;
+    }
+
+    .code-token--decorator {
+      color: #c4b5fd;
+    }
+
+    .code-token--string {
+      color: #86efac;
+    }
+
+    .code-token--number {
+      color: #f9a8d4;
+    }
+
+    .code-token--keyword {
+      color: #7dd3fc;
+      font-weight: 600;
+    }
+
     @media (max-width: 720px) {
       .pnl-chart__controls {
         justify-content: flex-start;

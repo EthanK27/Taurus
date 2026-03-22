@@ -285,8 +285,8 @@ const mergeSeries = (userSeries, buyHoldSeries, spySeries) => {
     }));
 };
 
-export function PnlPerformanceChart({ runDirectory }) {
-    const [rawData, setRawData] = useState({ user: [], buyHold: [], spy: [] });
+export function PnlPerformanceChart({ runDirectory, refreshToken = "" }) {
+    const [rawData, setRawData] = useState({ user: [], benchmark: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [range, setRange] = useState("1M");
@@ -353,7 +353,7 @@ export function PnlPerformanceChart({ runDirectory }) {
         return () => {
             cancelled = true;
         };
-    }, [runDirectory]);
+    }, [runDirectory, refreshToken]);
 
     const data = rawData.user;
     const buyHoldData = rawData.buyHold;
@@ -534,11 +534,8 @@ export function PnlPerformanceChart({ runDirectory }) {
                 </div>
                 <div className="pnl-chart__subtext">
                     {formatPercent(pct)} over selected range
-                    {showBuyHold
-                        ? ` • ${formatCurrency(buyHoldPnl)} for ${SERIES_LABELS.buyHold}`
-                        : ""}
-                    {showSpy
-                        ? ` • ${formatCurrency(spyPnl)} for ${SERIES_LABELS.spy}`
+                    {showBenchmark
+                        ? ` Ã¢â‚¬Â¢ ${formatCurrency(benchmarkPnl)} for ${SERIES_LABELS.benchmark}`
                         : ""}
                 </div>
             </div>
