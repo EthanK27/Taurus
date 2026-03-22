@@ -8,6 +8,43 @@ export const dynamic = "force-dynamic";
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
+function getOutputsDir() {
+    return path.join(getBackendDir(), "outputs");
+}
+
+function listOutputDirectories(outputsDir) {
+    if (!fs.existsSync(outputsDir)) {
+        return [];
+    }
+
+    return fs
+        .readdirSync(outputsDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => {
+            const directoryPath = path.join(outputsDir, entry.name);
+            const stats = fs.statSync(directoryPath);
+
+            return {
+                name: entry.name,
+                mtimeMs: stats.mtimeMs,
+            };
+        });
+}
+
+function detectRunDirectory(beforeEntries, afterEntries) {
+    const beforeByName = new Map(beforeEntries.map((entry) => [entry.name, entry.mtimeMs]));
+    const candidates = afterEntries.filter(
+        (entry) => !beforeByName.has(entry.name) || entry.mtimeMs > (beforeByName.get(entry.name) ?? 0),
+    );
+
+    if (!candidates.length) {
+        return null;
+    }
+
+    candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
+    return candidates[0].name;
+}
+
 function resolveBackendPaths() {
     const configuredDir = process.env.TAURUS_STRATEGY_BACKEND_DIR?.trim();
     if (configuredDir) {
@@ -158,20 +195,28 @@ async function callRemoteBackend({ prompt, model, url }) {
 async function getStrategyAnswer(prompt, model) {
     const remoteUrl = process.env.TAURUS_STRATEGY_BACKEND_URL?.trim();
     if (remoteUrl) {
-        return callRemoteBackend({ prompt, model, url: remoteUrl });
+        const answer = await callRemoteBackend({ prompt, model, url: remoteUrl });
+        return { answer, runDirectory: null };
     }
 
     const backendDir = getBackendDir();
     const scriptPath = path.join(backendDir, "gemini_backtest_agent.py");
+    const outputsDir = getOutputsDir();
 
     if (!fs.existsSync(scriptPath)) {
         throw new Error(`Strategy backend script not found at ${scriptPath}.`);
     }
 
+    const beforeEntries = listOutputDirectories(outputsDir);
     const attempts = [];
     for (const runner of buildRunnerCandidates()) {
         try {
-            return await runLocalAgent({ prompt, model, backendDir, runner });
+            const answer = await runLocalAgent({ prompt, model, backendDir, runner });
+            const afterEntries = listOutputDirectories(outputsDir);
+            return {
+                answer,
+                runDirectory: detectRunDirectory(beforeEntries, afterEntries),
+            };
         } catch (error) {
             attempts.push(
                 error instanceof Error ? error.message : String(error)
@@ -195,8 +240,8 @@ export async function POST(request) {
             );
         }
 
-        const answer = await getStrategyAnswer(prompt.trim(), model || DEFAULT_MODEL);
-        return Response.json({ answer });
+        const { answer, runDirectory } = await getStrategyAnswer(prompt.trim(), model || DEFAULT_MODEL);
+        return Response.json({ answer, runDirectory });
     } catch (error) {
         return Response.json(
             {

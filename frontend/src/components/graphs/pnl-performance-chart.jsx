@@ -275,7 +275,7 @@ const mergeSeries = (userSeries, benchmarkSeries) => {
     }));
 };
 
-export function PnlPerformanceChart() {
+export function PnlPerformanceChart({ runDirectory }) {
     const [rawData, setRawData] = useState({ user: [], benchmark: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -295,7 +295,12 @@ export function PnlPerformanceChart() {
         async function loadData() {
             try {
                 setLoading(true);
-                const response = await fetch("/api/graphs/pnl", {
+                const searchParams = new URLSearchParams();
+                if (runDirectory) {
+                    searchParams.set("runDirectory", runDirectory);
+                }
+
+                const response = await fetch(`/api/graphs/pnl?${searchParams.toString()}`, {
                     cache: "no-store",
                 });
 
@@ -332,7 +337,7 @@ export function PnlPerformanceChart() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [runDirectory]);
 
     const data = rawData.user;
     const benchmarkData = rawData.benchmark;

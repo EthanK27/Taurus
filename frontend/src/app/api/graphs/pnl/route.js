@@ -85,7 +85,60 @@ async function loadLatestBacktestLog() {
     }
 }
 
-export async function GET() {
+async function loadBacktestLogForRunDirectory(runDirectory) {
+    if (!runDirectory) {
+        return null;
+    }
+
+    try {
+        const targetDir = path.join(OUTPUTS_DIR, runDirectory);
+        const stats = await fs.stat(targetDir);
+        if (!stats.isDirectory()) {
+            return null;
+        }
+
+        const entries = await fs.readdir(targetDir, { withFileTypes: true });
+        const candidates = [];
+
+        for (const entry of entries) {
+            if (!entry.isFile() || !entry.name.endsWith("_pnl_log.json")) {
+                continue;
+            }
+
+            const filePath = path.join(targetDir, entry.name);
+            const fileStats = await fs.stat(filePath);
+            candidates.push({ filePath, mtimeMs: fileStats.mtimeMs });
+        }
+
+        if (!candidates.length) {
+            return null;
+        }
+
+        candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
+        const raw = await fs.readFile(candidates[0].filePath, "utf-8");
+        const payload = JSON.parse(raw);
+
+        return {
+            userSeries: normalizeSeries(payload.userSeries),
+            benchmarkSeries: normalizeSeries(payload.benchmarkSeries),
+            generatedAt: payload.generatedAt ?? new Date(candidates[0].mtimeMs).toISOString(),
+            source: "backtest-log",
+            runDirectory,
+        };
+    } catch {
+        return null;
+    }
+}
+
+export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const runDirectory = searchParams.get("runDirectory")?.trim();
+
+    const requestedLog = await loadBacktestLogForRunDirectory(runDirectory);
+    if (requestedLog?.userSeries?.length && requestedLog?.benchmarkSeries?.length) {
+        return Response.json(requestedLog);
+    }
+
     const latestLog = await loadLatestBacktestLog();
     if (latestLog?.userSeries?.length && latestLog?.benchmarkSeries?.length) {
         return Response.json(latestLog);

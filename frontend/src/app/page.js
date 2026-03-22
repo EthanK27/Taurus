@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     ArrowUp,
     LoaderCircle,
@@ -31,6 +32,7 @@ export default function Home() {
     const [messages, setMessages] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const router = useRouter();
 
     async function handleSubmit(event) {
         event?.preventDefault();
@@ -77,6 +79,10 @@ export default function Home() {
                     content: payload.answer || "No response returned.",
                 },
             ]);
+
+            if (payload?.runDirectory) {
+                router.push(`/strategy/${encodeURIComponent(payload.runDirectory)}`);
+            }
         } catch (submissionError) {
             setError(
                 submissionError instanceof Error
