@@ -135,7 +135,6 @@ def _extract_call_args(call: Any) -> dict[str, Any]:
 
 def _dispatch_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     tool_fn = TOOL_MAP[name]
-    print(f"calling tool name={name}")
     try:
         result = tool_fn(**args)
         return {"result": result}
