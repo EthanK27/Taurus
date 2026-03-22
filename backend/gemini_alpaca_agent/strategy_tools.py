@@ -61,6 +61,26 @@ Use these static strategy examples as style and logic references when helpful:
 """.strip()
 
 
+STRATEGY_ENVIRONMENT_GUIDE = """
+Local strategy generation and backtesting environment:
+
+- Strategies run in a local long/flat-only backtester.
+- The generated file must define exactly one function:
+    generate_signals(df: pd.DataFrame, params: dict | None = None) -> pd.DataFrame
+- The input is a pandas DataFrame of market bars sorted by time.
+- Required columns: open, high, low, close, volume.
+- Optional columns: trade_count, vwap, and any other extra data the caller provides.
+- Return a copy of the input DataFrame with a numeric signal column added.
+- signal values must stay in the inclusive range [0, 1].
+- Interpret signal >= 0.5 as long and signal < 0.5 as flat.
+- The backtester enters fully when the signal turns long and exits fully when it turns flat.
+- Only use pandas and numpy; do not use network calls, file I/O, printing, randomness, or external TA libraries.
+- Prefer vectorized pandas logic such as rolling windows, ewm, shift, diff, pct_change, clip, fillna, and np.where.
+- Handle NaNs safely and keep all outputs aligned to df.index.
+- If you use np.where for an intermediate calculation, wrap the result in a pandas Series with the original index before calling pandas methods on it.
+""".strip()
+
+
 _ALLOWED_IMPORTS = {("pandas", "pd"), ("numpy", "np")}
 
 
