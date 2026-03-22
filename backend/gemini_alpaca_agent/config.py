@@ -16,7 +16,7 @@ class Settings:
     alpaca_secret_key: str = os.getenv("ALPACA_SECRET_KEY", "")
     alpaca_paper: bool = os.getenv("ALPACA_PAPER", "true").lower() in {"1", "true", "yes"}
     default_data_feed: str = os.getenv("ALPACA_DATA_FEED", "iex")
-    default_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    default_model: str = os.getenv("GEMINI_MODEL", "gemini-3.1-pro-preview")
     strategies_dir: str = os.getenv("STRATEGIES_DIR", "strategies")
     outputs_dir: str = os.getenv("OUTPUTS_DIR", "outputs")
 
