@@ -1,6 +1,7 @@
 import { PythonCodeBlock } from "@/components/code/python-code-block";
 import { PnlPerformanceChart } from "@/components/graphs/pnl-performance-chart";
 import { AppShell } from "@/components/layout/app-shell";
+import { StrategySummaryPanel } from "@/components/strategy/strategy-summary-panel";
 
 const strategyPlaceholder = `# Select a run from /graphs or create a new one from the home screen.
 # The selected graph page will load the matching generated Python strategy here.`;
@@ -46,49 +47,7 @@ export default function StrategyPage() {
                             </div>
                         </section>
 
-                        <section className="glass-panel p-6 sm:p-8">
-                            <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/60">
-                                Summary
-                            </p>
-                            <h2 className="mt-3 text-2xl font-semibold text-white">
-                                Strategy notes
-                            </h2>
-
-                            <div className="mt-6 space-y-4">
-                                <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                                        Overview
-                                    </p>
-                                    <p className="mt-3 text-sm leading-7 text-slate-300">
-                                        Select a saved run to bind the chart, metrics, and generated strategy source together on one page.
-                                    </p>
-                                </div>
-
-                                <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
-                                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                                        Metrics
-                                    </p>
-                                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                                        <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                                                status
-                                            </p>
-                                            <p className="mt-2 text-2xl font-semibold text-white">
-                                                Awaiting selection
-                                            </p>
-                                        </div>
-                                        <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
-                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                                                source
-                                            </p>
-                                            <p className="mt-2 text-2xl font-semibold text-white">
-                                                Saved runs
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                        <StrategySummaryPanel />
                     </div>
 
                     <section className="glass-panel overflow-hidden">
