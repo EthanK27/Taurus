@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -232,14 +233,18 @@ def save_backtest_report(
     result: BacktestResult,
     output_dir: str | Path,
     prefix: str,
+    run_directory_name: str,
 ) -> dict[str, str]:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    summary_path = output_dir / f"{prefix}_summary.json"
-    equity_path = output_dir / f"{prefix}_equity.csv"
-    trades_path = output_dir / f"{prefix}_trades.json"
-    pnl_log_path = output_dir / f"{prefix}_pnl_log.json"
+    report_dir = output_dir / run_directory_name
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    summary_path = report_dir / f"{prefix}_summary.json"
+    equity_path = report_dir / f"{prefix}_equity.csv"
+    trades_path = report_dir / f"{prefix}_trades.json"
+    pnl_log_path = report_dir / f"{prefix}_pnl_log.json"
 
     summary_path.write_text(json.dumps(result.summary, indent=2), encoding="utf-8")
     result.equity_curve.to_csv(equity_path)
@@ -258,8 +263,27 @@ def save_backtest_report(
     pnl_log_path.write_text(json.dumps(pnl_log, indent=2), encoding="utf-8")
 
     return {
+        "report_dir": str(report_dir),
         "summary_path": str(summary_path),
         "equity_curve_path": str(equity_path),
         "trades_path": str(trades_path),
         "pnl_log_path": str(pnl_log_path),
     }
+
+
+def next_backtest_run_directory_name(output_dir: str | Path, symbol: str) -> str:
+    output_dir = Path(output_dir)
+    cleaned_symbol = re.sub(r"[^A-Za-z0-9]+", "", symbol).upper() or "RUN"
+    pattern = re.compile(rf"^{re.escape(cleaned_symbol)}(\d+)$", re.IGNORECASE)
+    highest_suffix = 0
+
+    if output_dir.exists():
+        for entry in output_dir.iterdir():
+            if not entry.is_dir():
+                continue
+
+            match = pattern.match(entry.name)
+            if match:
+                highest_suffix = max(highest_suffix, int(match.group(1)))
+
+    return f"{cleaned_symbol}{highest_suffix + 1}"
