@@ -1,11 +1,7 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PnlPerformanceChart } from "@/components/graphs/pnl-performance-chart";
 import { StrategySummaryPanel } from "@/components/strategy/strategy-summary-panel";
-
-const codePlaceholder = `// Strategy code will appear here
-if (ethan smith) {
-  return gay;
-}`;
+import { StrategyCodeEditorPanel } from "@/components/strategy/strategy-code-editor-panel";
 
 export default async function StrategyRunPage({ params }) {
     const { runDirectory } = await params;
@@ -53,25 +49,7 @@ export default async function StrategyRunPage({ params }) {
                         <StrategySummaryPanel runDirectory={runDirectory} />
                     </div>
 
-                    <section className="glass-panel overflow-hidden">
-                        <div className="flex items-center justify-between border-b border-white/8 bg-white/4 px-6 py-4">
-                            <div>
-                                <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/60">
-                                    Code
-                                </p>
-                                <h2 className="mt-2 text-xl font-semibold text-white">
-                                    Strategy
-                                </h2>
-                            </div>
-                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-                                Can edit
-                            </span>
-                        </div>
-
-                        <pre className="overflow-x-auto bg-slate-950/45 px-6 py-6 font-mono text-sm leading-7 text-slate-300">
-                            <code>{codePlaceholder}</code>
-                        </pre>
-                    </section>
+                    <StrategyCodeEditorPanel runDirectory={runDirectory} />
                 </div>
             </section>
         </AppShell>
