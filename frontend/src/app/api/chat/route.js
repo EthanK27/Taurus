@@ -46,23 +46,24 @@ function buildRunnerCandidates() {
         });
     }
 
-    const posixVenvPython = path.join(backendRoot, ".venv", "bin", "python");
-    const windowsVenvPython = path.join(backendRoot, ".venv", "Scripts", "python.exe");
+    const localPythonCandidates = process.platform === "win32"
+        ? [
+            path.join(backendRoot, ".venv", "Scripts", "python.exe"),
+            path.join(backendRoot, "venv", "Scripts", "python.exe"),
+        ]
+        : [
+            path.join(backendRoot, ".venv", "bin", "python"),
+            path.join(backendRoot, "venv", "bin", "python"),
+        ];
 
-    if (process.platform !== "win32" && fs.existsSync(posixVenvPython)) {
-        candidates.push({
-            command: posixVenvPython,
-            argsPrefix: [],
-            label: posixVenvPython,
-        });
-    }
-
-    if (process.platform === "win32" && fs.existsSync(windowsVenvPython)) {
-        candidates.push({
-            command: windowsVenvPython,
-            argsPrefix: [],
-            label: windowsVenvPython,
-        });
+    for (const pythonPath of localPythonCandidates) {
+        if (fs.existsSync(pythonPath)) {
+            candidates.push({
+                command: pythonPath,
+                argsPrefix: [],
+                label: pythonPath,
+            });
+        }
     }
 
     candidates.push(
