@@ -5,7 +5,7 @@ import path from "node:path";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3-flash-preview";
 
 function resolveBackendDir() {
     const configuredDir = process.env.TAURUS_STRATEGY_BACKEND_DIR?.trim();

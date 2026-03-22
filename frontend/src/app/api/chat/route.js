@@ -5,7 +5,7 @@ import { spawn } from "child_process";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_MODEL = "gemini-3.1-pro-preview";
+const DEFAULT_MODEL = "gemini-3-flash-preview";
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
 function getOutputsDir() {
@@ -239,9 +239,14 @@ async function getStrategyAnswer(prompt, model) {
                 runDirectory,
             };
         } catch (error) {
-            attempts.push(
-                error instanceof Error ? error.message : String(error)
-            );
+            const message = error instanceof Error ? error.message : String(error);
+            attempts.push(message);
+
+            // If the active Python environment reached model quota, switching
+            // interpreters will not fix it, so return the useful error directly.
+            if (isQuotaError(message)) {
+                throw new Error(message);
+            }
         }
     }
 

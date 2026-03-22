@@ -68,7 +68,7 @@ ALPACA_API_KEY=your_alpaca_api_key
 ALPACA_SECRET_KEY=your_alpaca_secret_key
 ALPACA_PAPER=true
 ALPACA_DATA_FEED=iex
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3-flash-preview
 ```
 
 ## Local Setup

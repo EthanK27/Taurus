@@ -95,7 +95,7 @@ export default function Home() {
                 },
                 body: JSON.stringify({
                     prompt: trimmedPrompt,
-                    model: "gemini-3.1-pro-preview",
+                    model: "gemini-3-flash-preview",
                 }),
             });
 
@@ -245,8 +245,8 @@ export default function Home() {
                                 <article
                                     key={message.id}
                                     className={`glass-panel p-4 sm:p-5 ${message.role === "user"
-                                            ? "border-blue-200/16 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.2),transparent_34%),linear-gradient(180deg,rgba(36,58,110,0.92),rgba(21,32,55,0.92))]"
-                                            : ""
+                                        ? "border-blue-200/16 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.2),transparent_34%),linear-gradient(180deg,rgba(36,58,110,0.92),rgba(21,32,55,0.92))]"
+                                        : ""
                                         }`}
                                 >
                                     <div className="mb-2 text-[11px] font-mono uppercase tracking-[0.28em] text-blue-100/60">
