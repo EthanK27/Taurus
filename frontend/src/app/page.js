@@ -48,7 +48,7 @@ export default function Home() {
             content: trimmedPrompt,
         };
 
-        setMessages((current) => [...current, userMessage]);
+        setMessages([userMessage]);
         setPrompt("");
         setError("");
         setIsSubmitting(true);
@@ -71,8 +71,8 @@ export default function Home() {
                 throw new Error(payload?.error || "Request failed.");
             }
 
-            setMessages((current) => [
-                ...current,
+            setMessages([
+                userMessage,
                 {
                     id: crypto.randomUUID(),
                     role: "assistant",
@@ -84,6 +84,7 @@ export default function Home() {
                 router.push(`/strategy/${encodeURIComponent(payload.runDirectory)}`);
             }
         } catch (submissionError) {
+            setMessages([]);
             setError(
                 submissionError instanceof Error
                     ? submissionError.message
