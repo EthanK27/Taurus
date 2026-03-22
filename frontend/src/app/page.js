@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     ArrowUp,
@@ -19,20 +19,54 @@ const suggestions = [
     "Generate me a strategy to sell \"Company Name\" stock if it increases more than \"X\"% in a day, only if you would gain a profit, from Aug 2023 to March 2026.",
 ];
 
-const historyItems = [
-    "History 1",
-    "History 2",
-    "History 3",
-    "History 4",
-];
+const HISTORY_STORAGE_KEY = "taurus-strategy-history";
+
+function formatHistoryDate(value = new Date()) {
+    return new Intl.DateTimeFormat("en-US", {
+        month: "numeric",
+        day: "numeric",
+        year: "numeric",
+    }).format(value);
+}
 
 export default function Home() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [prompt, setPrompt] = useState("");
     const [messages, setMessages] = useState([]);
+    const [historyItems, setHistoryItems] = useState([]);
+    const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
     const router = useRouter();
+
+    useEffect(() => {
+        try {
+            const storedHistory = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+            if (!storedHistory) {
+                return;
+            }
+
+            const parsedHistory = JSON.parse(storedHistory);
+            if (Array.isArray(parsedHistory)) {
+                setHistoryItems(parsedHistory);
+            }
+        } catch {
+            window.localStorage.removeItem(HISTORY_STORAGE_KEY);
+        } finally {
+            setHasLoadedHistory(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!hasLoadedHistory) {
+            return;
+        }
+
+        window.localStorage.setItem(
+            HISTORY_STORAGE_KEY,
+            JSON.stringify(historyItems)
+        );
+    }, [hasLoadedHistory, historyItems]);
 
     async function handleSubmit(event) {
         event?.preventDefault();
@@ -78,6 +112,19 @@ export default function Home() {
                     role: "assistant",
                     content: payload.answer || "No response returned.",
                 },
+            ]);
+
+            const historyLabel = payload?.runDirectory
+                ? `${payload.runDirectory} - ${formatHistoryDate()}`
+                : `Strategy - ${formatHistoryDate()}`;
+
+            setHistoryItems((currentHistory) => [
+                {
+                    id: payload?.runDirectory || crypto.randomUUID(),
+                    label: historyLabel,
+                    prompt: trimmedPrompt,
+                },
+                ...currentHistory.filter((item) => item.prompt !== trimmedPrompt),
             ]);
 
             if (payload?.runDirectory) {
@@ -144,15 +191,25 @@ export default function Home() {
                 </button>
 
                 <div className="space-y-2">
-                    {historyItems.map((item) => (
-                        <button
-                            key={item}
-                            className="flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(88,133,255,0.14),transparent_30%),linear-gradient(180deg,rgba(30,43,73,0.76),rgba(18,24,39,0.7))] px-4 py-3 text-left text-sm text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-white/12 hover:text-white"
-                        >
-                            <MessageSquare className="size-4 text-slate-500" />
-                            <span className="truncate">{item}</span>
-                        </button>
-                    ))}
+                    {historyItems.length > 0 ? (
+                        historyItems.map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => {
+                                    setPrompt(item.prompt);
+                                    setSidebarOpen(false);
+                                }}
+                                className="flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(88,133,255,0.14),transparent_30%),linear-gradient(180deg,rgba(30,43,73,0.76),rgba(18,24,39,0.7))] px-4 py-3 text-left text-sm text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-white/12 hover:text-white"
+                            >
+                                <MessageSquare className="size-4 shrink-0 text-slate-500" />
+                                <span className="truncate">{item.label}</span>
+                            </button>
+                        ))
+                    ) : (
+                        <div className="rounded-2xl border border-dashed border-white/10 px-4 py-5 text-sm text-slate-400">
+                            Your prompt history will show up here.
+                        </div>
+                    )}
                 </div>
             </aside>
 
