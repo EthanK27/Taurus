@@ -1,15 +1,187 @@
-const MOCK_DELAY_MS = 900;
+import fs from "fs";
+import path from "path";
+import { spawn } from "child_process";
 
-function buildMockAnswer(prompt, model) {
-    return [
-        "Mock backend response",
-        `Model: ${model || "gemini-2.5-flash"}`,
-        "",
-        `Prompt received: "${prompt}"`,
-        "",
-        "This route is a placeholder for the Python Gemini backtesting service.",
-        "When the backend is ready, keep the same request body shape and replace this mock answer with the real server result.",
-    ].join("\n");
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
+
+function resolveBackendPaths() {
+    const configuredDir = process.env.TAURUS_STRATEGY_BACKEND_DIR?.trim();
+    if (configuredDir) {
+        return {
+            backendDir: configuredDir,
+            backendRoot: path.resolve(configuredDir, ".."),
+        };
+    }
+
+    const rootCandidate = path.resolve(process.cwd(), "backend", "gemini_alpaca_agent");
+    const frontendCandidate = path.resolve(process.cwd(), "..", "backend", "gemini_alpaca_agent");
+    const selectedDir = fs.existsSync(path.join(rootCandidate, "gemini_backtest_agent.py"))
+        ? rootCandidate
+        : frontendCandidate;
+
+    return {
+        backendDir: selectedDir,
+        backendRoot: path.resolve(selectedDir, ".."),
+    };
+}
+
+function getBackendDir() {
+    return resolveBackendPaths().backendDir;
+}
+
+function buildRunnerCandidates() {
+    const { backendRoot } = resolveBackendPaths();
+    const configuredPython = process.env.TAURUS_STRATEGY_PYTHON?.trim();
+    const candidates = [];
+
+    if (configuredPython) {
+        candidates.push({
+            command: configuredPython,
+            argsPrefix: [],
+            label: configuredPython,
+        });
+    }
+
+    const localPythonCandidates = process.platform === "win32"
+        ? [
+            path.join(backendRoot, ".venv", "Scripts", "python.exe"),
+            path.join(backendRoot, "venv", "Scripts", "python.exe"),
+        ]
+        : [
+            path.join(backendRoot, ".venv", "bin", "python"),
+            path.join(backendRoot, "venv", "bin", "python"),
+        ];
+
+    for (const pythonPath of localPythonCandidates) {
+        if (fs.existsSync(pythonPath)) {
+            candidates.push({
+                command: pythonPath,
+                argsPrefix: [],
+                label: pythonPath,
+            });
+        }
+    }
+
+    candidates.push(
+        { command: "python3", argsPrefix: [], label: "python3" },
+        { command: "python", argsPrefix: [], label: "python" },
+        { command: "py", argsPrefix: ["-3"], label: "py -3" }
+    );
+
+    return candidates;
+}
+
+function runLocalAgent({ prompt, model, backendDir, runner }) {
+    return new Promise((resolve, reject) => {
+        const child = spawn(
+            runner.command,
+            [...runner.argsPrefix, "gemini_backtest_agent.py", prompt, "--model", model],
+            {
+                cwd: backendDir,
+                env: {
+                    ...process.env,
+                    PYTHONUNBUFFERED: "1",
+                },
+                stdio: ["ignore", "pipe", "pipe"],
+            }
+        );
+
+        let stdout = "";
+        let stderr = "";
+
+        const timeout = setTimeout(() => {
+            child.kill();
+            reject(new Error(`Timed out after ${DEFAULT_TIMEOUT_MS}ms while waiting for the strategy backend.`));
+        }, DEFAULT_TIMEOUT_MS);
+
+        child.stdout.on("data", (chunk) => {
+            stdout += chunk.toString();
+        });
+
+        child.stderr.on("data", (chunk) => {
+            stderr += chunk.toString();
+        });
+
+        child.on("error", (error) => {
+            clearTimeout(timeout);
+            reject(new Error(`${runner.label}: ${error.message}`));
+        });
+
+        child.on("close", (code) => {
+            clearTimeout(timeout);
+
+            const trimmedStdout = stdout.trim();
+            const trimmedStderr = stderr.trim();
+
+            if (code === 0) {
+                resolve(trimmedStdout || "No response returned from the strategy backend.");
+                return;
+            }
+
+            reject(
+                new Error(
+                    trimmedStderr ||
+                    trimmedStdout ||
+                    `${runner.label} exited with code ${code}.`
+                )
+            );
+        });
+    });
+}
+
+async function callRemoteBackend({ prompt, model, url }) {
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt, model }),
+        cache: "no-store",
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload?.error || `Remote backend request failed with status ${response.status}.`);
+    }
+
+    if (typeof payload?.answer !== "string" || !payload.answer.trim()) {
+        throw new Error("Remote backend did not return an answer string.");
+    }
+
+    return payload.answer;
+}
+
+async function getStrategyAnswer(prompt, model) {
+    const remoteUrl = process.env.TAURUS_STRATEGY_BACKEND_URL?.trim();
+    if (remoteUrl) {
+        return callRemoteBackend({ prompt, model, url: remoteUrl });
+    }
+
+    const backendDir = getBackendDir();
+    const scriptPath = path.join(backendDir, "gemini_backtest_agent.py");
+
+    if (!fs.existsSync(scriptPath)) {
+        throw new Error(`Strategy backend script not found at ${scriptPath}.`);
+    }
+
+    const attempts = [];
+    for (const runner of buildRunnerCandidates()) {
+        try {
+            return await runLocalAgent({ prompt, model, backendDir, runner });
+        } catch (error) {
+            attempts.push(
+                error instanceof Error ? error.message : String(error)
+            );
+        }
+    }
+
+    throw new Error(
+        `Unable to run the local strategy backend. Attempts: ${attempts.join(" | ")}`
+    );
 }
 
 export async function POST(request) {
@@ -23,15 +195,17 @@ export async function POST(request) {
             );
         }
 
-        await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
-
-        return Response.json({
-            answer: buildMockAnswer(prompt.trim(), model),
-        });
-    } catch {
+        const answer = await getStrategyAnswer(prompt.trim(), model || DEFAULT_MODEL);
+        return Response.json({ answer });
+    } catch (error) {
         return Response.json(
-            { error: "Invalid request payload." },
-            { status: 400 }
+            {
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "Something went wrong while sending the prompt.",
+            },
+            { status: 500 }
         );
     }
 }

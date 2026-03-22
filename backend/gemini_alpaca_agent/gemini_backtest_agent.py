@@ -60,7 +60,7 @@ def _tool_declarations() -> list[types.Tool]:
         ),
         types.FunctionDeclaration(
             name="generate_strategy_code",
-            description="Generate a Python strategy file from a natural-language trading strategy description.",
+            description="Generate a Python strategy file from a natural-language trading strategy description when the user wants code saved locally without immediately backtesting it.",
             parameters_json_schema={
                 "type": "object",
                 "properties": {

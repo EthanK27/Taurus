@@ -38,14 +38,26 @@ def _parse_adjustment(adjustment: str | None) -> Adjustment | None:
 
 
 def _parse_timeframe(timeframe: str) -> TimeFrame:
-    tf = timeframe.strip().lower()
+    tf = "".join(ch for ch in timeframe.strip().lower() if ch.isalnum())
     mapping = {
         "1min": TimeFrame(1, TimeFrameUnit.Minute),
+        "1minute": TimeFrame(1, TimeFrameUnit.Minute),
+        "minute": TimeFrame(1, TimeFrameUnit.Minute),
+        "minutes": TimeFrame(1, TimeFrameUnit.Minute),
         "5min": TimeFrame(5, TimeFrameUnit.Minute),
+        "5minute": TimeFrame(5, TimeFrameUnit.Minute),
         "15min": TimeFrame(15, TimeFrameUnit.Minute),
+        "15minute": TimeFrame(15, TimeFrameUnit.Minute),
         "30min": TimeFrame(30, TimeFrameUnit.Minute),
+        "30minute": TimeFrame(30, TimeFrameUnit.Minute),
         "1hour": TimeFrame(1, TimeFrameUnit.Hour),
+        "hour": TimeFrame(1, TimeFrameUnit.Hour),
+        "hourly": TimeFrame(1, TimeFrameUnit.Hour),
         "1day": TimeFrame(1, TimeFrameUnit.Day),
+        "day": TimeFrame(1, TimeFrameUnit.Day),
+        "daily": TimeFrame(1, TimeFrameUnit.Day),
+        "dailybar": TimeFrame(1, TimeFrameUnit.Day),
+        "dailybars": TimeFrame(1, TimeFrameUnit.Day),
     }
     if tf not in mapping:
         raise ValueError(f"Unsupported timeframe: {timeframe}")
