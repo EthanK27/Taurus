@@ -37,8 +37,9 @@ const RANGE_LABELS = {
 };
 
 const SERIES_LABELS = {
-    user: "User",
-    benchmark: "S&P 500",
+    user: "Strategy",
+    buyHold: "Buy & Hold",
+    spy: "SPY Hold",
 };
 
 const X_TICK_COUNTS = {
@@ -171,14 +172,17 @@ const buildXTicks = (series, range) => {
     return ticks;
 };
 
-const buildYTicks = (series, showBenchmark) => {
+const buildYTicks = (series, showBuyHold, showSpy) => {
     if (!series.length) return [0, 1, 2, 3, 4, 5];
 
     const values = [];
     for (const item of series) {
         if (typeof item.userPnl === "number") values.push(item.userPnl);
-        if (showBenchmark && typeof item.benchmarkPnl === "number") {
-            values.push(item.benchmarkPnl);
+        if (showBuyHold && typeof item.buyHoldPnl === "number") {
+            values.push(item.buyHoldPnl);
+        }
+        if (showSpy && typeof item.spyPnl === "number") {
+            values.push(item.spyPnl);
         }
     }
 
@@ -265,27 +269,32 @@ const downsample = (data, range) => {
     return result;
 };
 
-const mergeSeries = (userSeries, benchmarkSeries) => {
-    const benchmarkByTimestamp = new Map(
-        benchmarkSeries.map((entry) => [entry.timestamp, entry.pnl]),
+const mergeSeries = (userSeries, buyHoldSeries, spySeries) => {
+    const buyHoldByTimestamp = new Map(
+        buyHoldSeries.map((entry) => [entry.timestamp, entry.pnl]),
+    );
+    const spyByTimestamp = new Map(
+        spySeries.map((entry) => [entry.timestamp, entry.pnl]),
     );
 
     return userSeries.map((entry) => ({
         timestamp: entry.timestamp,
         userPnl: entry.pnl,
-        benchmarkPnl: benchmarkByTimestamp.get(entry.timestamp) ?? null,
+        buyHoldPnl: buyHoldByTimestamp.get(entry.timestamp) ?? null,
+        spyPnl: spyByTimestamp.get(entry.timestamp) ?? null,
     }));
 };
 
 export function PnlPerformanceChart({ runDirectory }) {
-    const [rawData, setRawData] = useState({ user: [], benchmark: [] });
+    const [rawData, setRawData] = useState({ user: [], buyHold: [], spy: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [range, setRange] = useState("1M");
     const [mode, setMode] = useState("area");
     const [startDate, setStartDate] = useState("");
     const [hasManualStartDate, setHasManualStartDate] = useState(false);
-    const [showBenchmark, setShowBenchmark] = useState(true);
+    const [showBuyHold, setShowBuyHold] = useState(true);
+    const [showSpy, setShowSpy] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
@@ -317,11 +326,14 @@ export function PnlPerformanceChart({ runDirectory }) {
                 const user = Array.isArray(payload?.userSeries)
                     ? payload.userSeries
                     : [];
-                const benchmark = Array.isArray(payload?.benchmarkSeries)
-                    ? payload.benchmarkSeries
+                const buyHold = Array.isArray(payload?.buyHoldSeries)
+                    ? payload.buyHoldSeries
+                    : [];
+                const spy = Array.isArray(payload?.spySeries)
+                    ? payload.spySeries
                     : [];
 
-                setRawData({ user, benchmark });
+                setRawData({ user, buyHold, spy });
                 setStartDate("");
                 setHasManualStartDate(false);
                 setError("");
@@ -344,7 +356,8 @@ export function PnlPerformanceChart({ runDirectory }) {
     }, [runDirectory]);
 
     const data = rawData.user;
-    const benchmarkData = rawData.benchmark;
+    const buyHoldData = rawData.buyHold;
+    const spyData = rawData.spy;
     const availableStartDate = formatDateInput(data[0]?.timestamp);
     const availableEndDate = formatDateInput(data.at(-1)?.timestamp);
     const defaultStartDate = useMemo(() => {
@@ -374,30 +387,45 @@ export function PnlPerformanceChart({ runDirectory }) {
         [data, range, selectedStartDate, availableEndDate],
     );
 
-    const visibleBenchmarkData = useMemo(
+    const visibleBuyHoldData = useMemo(
         () =>
             buildVisibleWindow({
-                data: benchmarkData,
+                data: buyHoldData,
                 range,
                 startDate: selectedStartDate,
                 availableEndDate,
             }),
-        [benchmarkData, range, selectedStartDate, availableEndDate],
+        [buyHoldData, range, selectedStartDate, availableEndDate],
+    );
+
+    const visibleSpyData = useMemo(
+        () =>
+            buildVisibleWindow({
+                data: spyData,
+                range,
+                startDate: selectedStartDate,
+                availableEndDate,
+            }),
+        [spyData, range, selectedStartDate, availableEndDate],
     );
 
     const processed = useMemo(() => downsample(visibleData, range), [visibleData, range]);
-    const processedBenchmark = useMemo(
-        () => downsample(visibleBenchmarkData, range),
-        [visibleBenchmarkData, range],
+    const processedBuyHold = useMemo(
+        () => downsample(visibleBuyHoldData, range),
+        [visibleBuyHoldData, range],
+    );
+    const processedSpy = useMemo(
+        () => downsample(visibleSpyData, range),
+        [visibleSpyData, range],
     );
     const chartData = useMemo(
-        () => mergeSeries(processed, processedBenchmark),
-        [processed, processedBenchmark],
+        () => mergeSeries(processed, processedBuyHold, processedSpy),
+        [processed, processedBuyHold, processedSpy],
     );
     const xTicks = useMemo(() => buildXTicks(chartData, range), [chartData, range]);
     const yTicks = useMemo(
-        () => buildYTicks(chartData, showBenchmark),
-        [chartData, showBenchmark],
+        () => buildYTicks(chartData, showBuyHold, showSpy),
+        [chartData, showBuyHold, showSpy],
     );
 
     const start = processed[0]?.pnl || 0;
@@ -418,9 +446,12 @@ export function PnlPerformanceChart({ runDirectory }) {
         return expectedEndDate > availableEndDate ? availableEndDate : expectedEndDate;
     }, [availableEndDate, range, selectedStartDate]);
 
-    const benchmarkStart = processedBenchmark[0]?.pnl || 0;
-    const benchmarkEnd = processedBenchmark[processedBenchmark.length - 1]?.pnl || 0;
-    const benchmarkPnl = benchmarkEnd - benchmarkStart;
+    const buyHoldStart = processedBuyHold[0]?.pnl || 0;
+    const buyHoldEnd = processedBuyHold[processedBuyHold.length - 1]?.pnl || 0;
+    const buyHoldPnl = buyHoldEnd - buyHoldStart;
+    const spyStart = processedSpy[0]?.pnl || 0;
+    const spyEnd = processedSpy[processedSpy.length - 1]?.pnl || 0;
+    const spyPnl = spyEnd - spyStart;
 
     if (loading) {
         return (
@@ -488,17 +519,26 @@ export function PnlPerformanceChart({ runDirectory }) {
                         <span className="pnl-chart__legend-swatch pnl-chart__legend-swatch--user" />
                         <span>{SERIES_LABELS.user}</span>
                     </div>
-                    {showBenchmark ? (
+                    {showBuyHold ? (
                         <div className="pnl-chart__legend-item">
-                            <span className="pnl-chart__legend-swatch pnl-chart__legend-swatch--benchmark" />
-                            <span>{SERIES_LABELS.benchmark}</span>
+                            <span className="pnl-chart__legend-swatch pnl-chart__legend-swatch--buy-hold" />
+                            <span>{SERIES_LABELS.buyHold}</span>
+                        </div>
+                    ) : null}
+                    {showSpy ? (
+                        <div className="pnl-chart__legend-item">
+                            <span className="pnl-chart__legend-swatch pnl-chart__legend-swatch--spy" />
+                            <span>{SERIES_LABELS.spy}</span>
                         </div>
                     ) : null}
                 </div>
                 <div className="pnl-chart__subtext">
                     {formatPercent(pct)} over selected range
-                    {showBenchmark
-                        ? ` • ${formatCurrency(benchmarkPnl)} for ${SERIES_LABELS.benchmark}`
+                    {showBuyHold
+                        ? ` • ${formatCurrency(buyHoldPnl)} for ${SERIES_LABELS.buyHold}`
+                        : ""}
+                    {showSpy
+                        ? ` • ${formatCurrency(spyPnl)} for ${SERIES_LABELS.spy}`
                         : ""}
                 </div>
             </div>
@@ -516,10 +556,16 @@ export function PnlPerformanceChart({ runDirectory }) {
 
                 <div className="pnl-chart__mode-switcher">
                     <Button
-                        variant={showBenchmark ? "default" : "outline"}
-                        onClick={() => setShowBenchmark((current) => !current)}
+                        variant={showBuyHold ? "default" : "outline"}
+                        onClick={() => setShowBuyHold((current) => !current)}
                     >
-                        S&P 500
+                        Buy &amp; Hold
+                    </Button>
+                    <Button
+                        variant={showSpy ? "default" : "outline"}
+                        onClick={() => setShowSpy((current) => !current)}
+                    >
+                        SPY Hold
                     </Button>
                     <Button
                         variant={mode === "line" ? "default" : "outline"}
@@ -572,18 +618,28 @@ export function PnlPerformanceChart({ runDirectory }) {
                                         const userValue = payload.find(
                                             (item) => item.dataKey === "userPnl",
                                         )?.value;
-                                        const benchmarkValue = payload.find(
-                                            (item) => item.dataKey === "benchmarkPnl",
+                                        const buyHoldValue = payload.find(
+                                            (item) => item.dataKey === "buyHoldPnl",
+                                        )?.value;
+                                        const spyValue = payload.find(
+                                            (item) => item.dataKey === "spyPnl",
                                         )?.value;
                                         const userChange =
                                             start !== 0 && typeof userValue === "number"
                                                 ? ((userValue - start) / Math.abs(start)) * 100
                                                 : 0;
-                                        const benchmarkChange =
-                                            benchmarkStart !== 0 &&
-                                            typeof benchmarkValue === "number"
-                                                ? ((benchmarkValue - benchmarkStart) /
-                                                      Math.abs(benchmarkStart)) *
+                                        const buyHoldChange =
+                                            buyHoldStart !== 0 &&
+                                            typeof buyHoldValue === "number"
+                                                ? ((buyHoldValue - buyHoldStart) /
+                                                      Math.abs(buyHoldStart)) *
+                                                  100
+                                                : 0;
+                                        const spyChange =
+                                            spyStart !== 0 &&
+                                            typeof spyValue === "number"
+                                                ? ((spyValue - spyStart) /
+                                                      Math.abs(spyStart)) *
                                                   100
                                                 : 0;
 
@@ -596,11 +652,17 @@ export function PnlPerformanceChart({ runDirectory }) {
                                                     {SERIES_LABELS.user}: {formatCurrency(userValue ?? 0)} (
                                                     {formatPercent(userChange)})
                                                 </div>
-                                                {showBenchmark &&
-                                                typeof benchmarkValue === "number" ? (
+                                                {showBuyHold &&
+                                                typeof buyHoldValue === "number" ? (
                                                     <div>
-                                                        {SERIES_LABELS.benchmark}: {formatCurrency(benchmarkValue)} (
-                                                        {formatPercent(benchmarkChange)})
+                                                        {SERIES_LABELS.buyHold}: {formatCurrency(buyHoldValue)} (
+                                                        {formatPercent(buyHoldChange)})
+                                                    </div>
+                                                ) : null}
+                                                {showSpy && typeof spyValue === "number" ? (
+                                                    <div>
+                                                        {SERIES_LABELS.spy}: {formatCurrency(spyValue)} (
+                                                        {formatPercent(spyChange)})
                                                     </div>
                                                 ) : null}
                                             </div>
@@ -615,11 +677,22 @@ export function PnlPerformanceChart({ runDirectory }) {
                                     dot={false}
                                     isAnimationActive
                                 />
-                                {showBenchmark ? (
+                                {showBuyHold ? (
                                     <Line
                                         type="monotone"
-                                        dataKey="benchmarkPnl"
-                                        stroke="#f87171"
+                                        dataKey="buyHoldPnl"
+                                        stroke="#f97316"
+                                        strokeWidth={2}
+                                        dot={false}
+                                        isAnimationActive
+                                        connectNulls={false}
+                                    />
+                                ) : null}
+                                {showSpy ? (
+                                    <Line
+                                        type="monotone"
+                                        dataKey="spyPnl"
+                                        stroke="#22c55e"
                                         strokeWidth={2}
                                         dot={false}
                                         isAnimationActive
@@ -634,9 +707,9 @@ export function PnlPerformanceChart({ runDirectory }) {
                                         <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.45} />
                                         <stop offset="100%" stopOpacity={0} />
                                     </linearGradient>
-                                    {showBenchmark ? (
+                                    {showBuyHold ? (
                                         <linearGradient
-                                            id="benchmarkAreaGradient"
+                                            id="buyHoldAreaGradient"
                                             x1="0"
                                             y1="0"
                                             x2="0"
@@ -644,9 +717,15 @@ export function PnlPerformanceChart({ runDirectory }) {
                                         >
                                             <stop
                                                 offset="0%"
-                                                stopColor="#f87171"
+                                                stopColor="#f97316"
                                                 stopOpacity={0.35}
                                             />
+                                            <stop offset="100%" stopOpacity={0} />
+                                        </linearGradient>
+                                    ) : null}
+                                    {showSpy ? (
+                                        <linearGradient id="spyAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
                                             <stop offset="100%" stopOpacity={0} />
                                         </linearGradient>
                                     ) : null}
@@ -677,18 +756,28 @@ export function PnlPerformanceChart({ runDirectory }) {
                                         const userValue = payload.find(
                                             (item) => item.dataKey === "userPnl",
                                         )?.value;
-                                        const benchmarkValue = payload.find(
-                                            (item) => item.dataKey === "benchmarkPnl",
+                                        const buyHoldValue = payload.find(
+                                            (item) => item.dataKey === "buyHoldPnl",
+                                        )?.value;
+                                        const spyValue = payload.find(
+                                            (item) => item.dataKey === "spyPnl",
                                         )?.value;
                                         const userChange =
                                             start !== 0 && typeof userValue === "number"
                                                 ? ((userValue - start) / Math.abs(start)) * 100
                                                 : 0;
-                                        const benchmarkChange =
-                                            benchmarkStart !== 0 &&
-                                            typeof benchmarkValue === "number"
-                                                ? ((benchmarkValue - benchmarkStart) /
-                                                      Math.abs(benchmarkStart)) *
+                                        const buyHoldChange =
+                                            buyHoldStart !== 0 &&
+                                            typeof buyHoldValue === "number"
+                                                ? ((buyHoldValue - buyHoldStart) /
+                                                      Math.abs(buyHoldStart)) *
+                                                  100
+                                                : 0;
+                                        const spyChange =
+                                            spyStart !== 0 &&
+                                            typeof spyValue === "number"
+                                                ? ((spyValue - spyStart) /
+                                                      Math.abs(spyStart)) *
                                                   100
                                                 : 0;
 
@@ -701,11 +790,17 @@ export function PnlPerformanceChart({ runDirectory }) {
                                                     {SERIES_LABELS.user}: {formatCurrency(userValue ?? 0)} (
                                                     {formatPercent(userChange)})
                                                 </div>
-                                                {showBenchmark &&
-                                                typeof benchmarkValue === "number" ? (
+                                                {showBuyHold &&
+                                                typeof buyHoldValue === "number" ? (
                                                     <div>
-                                                        {SERIES_LABELS.benchmark}: {formatCurrency(benchmarkValue)} (
-                                                        {formatPercent(benchmarkChange)})
+                                                        {SERIES_LABELS.buyHold}: {formatCurrency(buyHoldValue)} (
+                                                        {formatPercent(buyHoldChange)})
+                                                    </div>
+                                                ) : null}
+                                                {showSpy && typeof spyValue === "number" ? (
+                                                    <div>
+                                                        {SERIES_LABELS.spy}: {formatCurrency(spyValue)} (
+                                                        {formatPercent(spyChange)})
                                                     </div>
                                                 ) : null}
                                             </div>
@@ -721,13 +816,24 @@ export function PnlPerformanceChart({ runDirectory }) {
                                     dot={false}
                                     isAnimationActive
                                 />
-                                {showBenchmark ? (
+                                {showBuyHold ? (
                                     <Area
                                         type="monotone"
-                                        dataKey="benchmarkPnl"
-                                        stroke="#f87171"
+                                        dataKey="buyHoldPnl"
+                                        stroke="#f97316"
                                         strokeWidth={2}
-                                        fill="url(#benchmarkAreaGradient)"
+                                        fill="url(#buyHoldAreaGradient)"
+                                        dot={false}
+                                        isAnimationActive
+                                    />
+                                ) : null}
+                                {showSpy ? (
+                                    <Area
+                                        type="monotone"
+                                        dataKey="spyPnl"
+                                        stroke="#22c55e"
+                                        strokeWidth={2}
+                                        fill="url(#spyAreaGradient)"
                                         dot={false}
                                         isAnimationActive
                                     />
