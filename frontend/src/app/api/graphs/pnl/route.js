@@ -76,7 +76,8 @@ async function loadLatestBacktestLog() {
 
         return {
             userSeries: normalizeSeries(payload.userSeries),
-            benchmarkSeries: normalizeSeries(payload.benchmarkSeries),
+            buyHoldSeries: normalizeSeries(payload.buyHoldSeries ?? payload.benchmarkSeries),
+            spySeries: normalizeSeries(payload.spySeries),
             generatedAt: payload.generatedAt ?? new Date(candidates[0].mtimeMs).toISOString(),
             source: "backtest-log",
         };
@@ -120,7 +121,8 @@ async function loadBacktestLogForRunDirectory(runDirectory) {
 
         return {
             userSeries: normalizeSeries(payload.userSeries),
-            benchmarkSeries: normalizeSeries(payload.benchmarkSeries),
+            buyHoldSeries: normalizeSeries(payload.buyHoldSeries ?? payload.benchmarkSeries),
+            spySeries: normalizeSeries(payload.spySeries),
             generatedAt: payload.generatedAt ?? new Date(candidates[0].mtimeMs).toISOString(),
             source: "backtest-log",
             runDirectory,
@@ -135,21 +137,23 @@ export async function GET(request) {
     const runDirectory = searchParams.get("runDirectory")?.trim();
 
     const requestedLog = await loadBacktestLogForRunDirectory(runDirectory);
-    if (requestedLog?.userSeries?.length && requestedLog?.benchmarkSeries?.length) {
+    if (requestedLog?.userSeries?.length && requestedLog?.buyHoldSeries?.length) {
         return Response.json(requestedLog);
     }
 
     const latestLog = await loadLatestBacktestLog();
-    if (latestLog?.userSeries?.length && latestLog?.benchmarkSeries?.length) {
+    if (latestLog?.userSeries?.length && latestLog?.buyHoldSeries?.length) {
         return Response.json(latestLog);
     }
 
     const userSeries = buildSeries(10000, 0.11, 170);
-    const benchmarkSeries = buildSeries(9800, 0.08, 120);
+    const buyHoldSeries = buildSeries(9800, 0.08, 120);
+    const spySeries = buildSeries(9700, 0.075, 95);
 
     return Response.json({
         userSeries,
-        benchmarkSeries,
+        buyHoldSeries,
+        spySeries,
         generatedAt: new Date().toISOString(),
         source: "synthetic",
     });
