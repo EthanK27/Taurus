@@ -71,6 +71,8 @@ const addUTCDays = (value, days) => {
     return date.toISOString().slice(0, 10);
 };
 
+const subtractUTCDays = (value, days) => addUTCDays(value, -days);
+
 const toTimestampBoundary = (value, endOfDay = false) => {
     const [year, month, day] = value.split("-").map(Number);
     const date = new Date(
@@ -282,6 +284,7 @@ export function PnlPerformanceChart({ runDirectory }) {
     const [range, setRange] = useState("1M");
     const [mode, setMode] = useState("area");
     const [startDate, setStartDate] = useState("");
+    const [hasManualStartDate, setHasManualStartDate] = useState(false);
     const [showBenchmark, setShowBenchmark] = useState(true);
     const [isMounted, setIsMounted] = useState(false);
 
@@ -319,7 +322,8 @@ export function PnlPerformanceChart({ runDirectory }) {
                     : [];
 
                 setRawData({ user, benchmark });
-                setStartDate(formatDateInput(user[0]?.timestamp));
+                setStartDate("");
+                setHasManualStartDate(false);
                 setError("");
             } catch {
                 if (!cancelled) {
@@ -343,7 +347,21 @@ export function PnlPerformanceChart({ runDirectory }) {
     const benchmarkData = rawData.benchmark;
     const availableStartDate = formatDateInput(data[0]?.timestamp);
     const availableEndDate = formatDateInput(data.at(-1)?.timestamp);
-    const selectedStartDate = startDate || availableStartDate;
+    const defaultStartDate = useMemo(() => {
+        if (!availableStartDate || !availableEndDate) {
+            return "";
+        }
+
+        if (range === "ALL") {
+            return availableStartDate;
+        }
+
+        const dayCount = RANGE_DAYS[range] ?? 30;
+        const trailingStartDate = subtractUTCDays(availableEndDate, dayCount - 1);
+        return trailingStartDate < availableStartDate ? availableStartDate : trailingStartDate;
+    }, [availableEndDate, availableStartDate, range]);
+    const selectedStartDate =
+        hasManualStartDate && startDate ? startDate : defaultStartDate;
 
     const visibleData = useMemo(
         () =>
@@ -438,7 +456,10 @@ export function PnlPerformanceChart({ runDirectory }) {
                             value={selectedStartDate}
                             min={availableStartDate}
                             max={availableEndDate}
-                            onChange={(event) => setStartDate(event.target.value)}
+                            onChange={(event) => {
+                                setStartDate(event.target.value);
+                                setHasManualStartDate(true);
+                            }}
                         />
                     </label>
                 </div>

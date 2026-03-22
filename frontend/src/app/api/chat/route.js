@@ -5,7 +5,7 @@ import { spawn } from "child_process";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.1-pro-preview";
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
 function getOutputsDir() {

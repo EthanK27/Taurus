@@ -1,21 +1,62 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as echarts from "echarts";
 
-const alphaSeries = [
-    { name: "Strategy 1", alpha: 1.82 },
-    { name: "Strategy 2", alpha: -1.37 },
-    { name: "Strategy 3", alpha: 1.14 },
-    { name: "Strategy 4", alpha: 1.54 },
-    { name: "Strategy 5", alpha: -0.71 },
-    { name: "Strategy 6", alpha: 0.68 },
-];
+function formatPromptedAt(value) {
+    if (!value) {
+        return "Unknown";
+    }
+
+    return new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "America/New_York",
+    }).format(new Date(value));
+}
 
 export function AlphaBarChart() {
     const chartRef = useRef(null);
     const router = useRouter();
+    const [alphaSeries, setAlphaSeries] = useState([]);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadSeries() {
+            try {
+                const response = await fetch("/api/graphs/alpha", {
+                    cache: "no-store",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to load alpha data.");
+                }
+
+                const payload = await response.json();
+                if (cancelled) {
+                    return;
+                }
+
+                setAlphaSeries(Array.isArray(payload?.entries) ? payload.entries : []);
+                setError("");
+            } catch {
+                if (!cancelled) {
+                    setAlphaSeries([]);
+                    setError("Unable to load strategy alpha data.");
+                }
+            }
+        }
+
+        loadSeries();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         if (!chartRef.current) {
@@ -48,7 +89,14 @@ export function AlphaBarChart() {
                     color: "#e2f3ff",
                     fontSize: 12,
                 },
-                formatter: ({ name, value }) => `${name}<br/>Alpha: ${value.toFixed(2)}`,
+                formatter: ({ data }) => {
+                    const strategyValue = Number(data?.strategyTotalReturnPct ?? 0).toFixed(2);
+                    const benchmarkValue = Number(data?.buyHoldReturnPct ?? 0).toFixed(2);
+                    const alphaValue = Number(data?.value ?? 0).toFixed(2);
+                    const promptedAt = formatPromptedAt(data?.promptedAt);
+
+                    return `${data?.name}<br/>Alpha: ${alphaValue}<br/>Strategy: ${strategyValue}%<br/>Buy & Hold: ${benchmarkValue}%<br/>Prompted: ${promptedAt}`;
+                },
             },
             xAxis: {
                 type: "category",
@@ -98,7 +146,14 @@ export function AlphaBarChart() {
             series: [
                 {
                     type: "bar",
-                    data: alphaSeries.map((item) => item.alpha),
+                    data: alphaSeries.map((item) => ({
+                        value: item.alpha,
+                        name: item.name,
+                        runDirectory: item.runDirectory,
+                        strategyTotalReturnPct: item.strategyTotalReturnPct,
+                        buyHoldReturnPct: item.buyHoldReturnPct,
+                        promptedAt: item.promptedAt,
+                    })),
                     barWidth: "48%",
                     itemStyle: {
                         borderRadius: [18, 18, 10, 10],
@@ -126,8 +181,13 @@ export function AlphaBarChart() {
             ],
         });
 
-        const handleClick = () => {
-            router.push("/strategy");
+        const handleClick = (params) => {
+            const runDirectory = params?.data?.runDirectory;
+            if (!runDirectory) {
+                return;
+            }
+
+            router.push(`/strategy/${encodeURIComponent(runDirectory)}`);
         };
 
         chart.on("click", handleClick);
@@ -137,7 +197,7 @@ export function AlphaBarChart() {
             chart.off("click", handleClick);
             chart.dispose();
         };
-    }, [router]);
+    }, [alphaSeries, router]);
 
     return (
         <div className="rounded-[28px] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(125,211,252,0.14),transparent_28%),linear-gradient(180deg,rgba(4,10,24,0.28),rgba(2,6,23,0.44))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-5">
@@ -147,16 +207,30 @@ export function AlphaBarChart() {
                         Strategy Alpha
                     </p>
                     <h3 className="mt-2 text-lg font-semibold text-white">
-                        Hardcoded alpha leaderboard
+                        Live alpha leaderboard
                     </h3>
                 </div>
 
                 <span className="rounded-full border border-cyan-200/12 bg-cyan-200/8 px-3 py-1 text-xs text-cyan-50/75">
-                    Click a bar to open strategy
+                    Click a bar to view strategy
                 </span>
             </div>
 
-            <div ref={chartRef} className="h-[380px] w-full" aria-label="Alpha values bar chart" />
+            <p className="mb-4 text-xs text-slate-400">
+                Ordered by recency, with the newest strategies on the left.
+            </p>
+
+            {error ? (
+                <p className="mb-4 text-sm text-rose-300">{error}</p>
+            ) : null}
+
+            {!error && !alphaSeries.length ? (
+                <p className="mb-4 text-sm text-slate-300">
+                    No completed backtests yet.
+                </p>
+            ) : null}
+
+            <div ref={chartRef} className="h-95 w-full" aria-label="Alpha values bar chart" />
         </div>
     );
 }
