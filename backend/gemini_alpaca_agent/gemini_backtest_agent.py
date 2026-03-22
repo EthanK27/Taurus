@@ -25,6 +25,7 @@ Default behavior:
 - Always call given tools.
 - If the user request is missing required details, call report_missing_information and then respond with the tool's request_message, asking for the exact missing inputs instead of guessing.
 - Generate a strategy file and then run a backtest with the generated file.
+- Even when a backtest is not requested, run the local backtest for the generated strategy file and report the backtest results, so the user can iteratively refine the strategy based on the backtest performance.
 - Be very verbose and specific about the strategy spec in the generating the strategy file.
 - Use long/flat strategies for this local backtester.
 - Even when a backtest is not requested, run the local backtest for the generated strategy file and report the backtest results, so the user can iteratively refine the strategy based on the backtest performance.
@@ -80,8 +81,8 @@ def _tool_declarations() -> list[types.Tool]:
                     "strategy_path": {"type": "string", "description": "Path to the Python strategy file."},
                     "symbol": {"type": "string", "description": "Ticker symbol like SPY. When given a company name, pick their most common ticker"},
                     "timeframe": {"type": "string", "description": "One of 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day. When not provided by the user, choose 1Hour"},
-                    "start": {"type": "string", "description": "ISO datetime string. When not provided, should be one year before the end date"},
-                    "end": {"type": "string", "description": "ISO datetime string. When not provided, should be March 15th, 2026."},
+                    "start": {"type": "string", "description": "ISO datetime string. Calculate the start date based on the strategy description and the end date when not provided."},
+                    "end": {"type": "string", "description": "ISO datetime string. When not provided, it should be March 15th, 2026."},
                     "initial_cash": {"type": "number", "description": "Starting cash.", "default": 10000.0},
                     "commission_per_trade": {"type": "number", "description": "Flat commission per entry/exit.", "default": 0.0},
                     "slippage_bps": {"type": "number", "description": "Slippage in basis points.", "default": 0.0},
@@ -136,6 +137,8 @@ def _extract_call_args(call: Any) -> dict[str, Any]:
 
 def _dispatch_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     tool_fn = TOOL_MAP[name]
+    with open("agent_tool_calls.log", "a") as f:
+        f.write(f"Calling tool: {name} with args: {args}\n")
     try:
         result = tool_fn(**args)
         return {"result": result}
