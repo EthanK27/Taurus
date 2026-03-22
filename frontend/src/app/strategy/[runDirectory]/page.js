@@ -1,14 +1,31 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { StrategyCodeWorkbench } from "@/components/code/strategy-code-workbench";
 import { PnlPerformanceChart } from "@/components/graphs/pnl-performance-chart";
 import { StrategySummaryPanel } from "@/components/strategy/strategy-summary-panel";
+import { loadRunSnapshot } from "@/lib/strategy-runs";
 
-const codePlaceholder = `// Strategy code will appear here
-if (ethan smith) {
-  return gay;
-}`;
+function buildFallbackCode(runDirectory) {
+    return `# Strategy source could not be resolved for ${runDirectory}.
+# Add or restore the matching file under backend/gemini_alpaca_agent/strategies
+# before using the retest action on this run.`;
+}
+
+function getFilename(snapshot) {
+    if (snapshot?.strategyPath) {
+        return snapshot.strategyPath.split(/[/\\]/u).at(-1);
+    }
+
+    if (snapshot?.strategyName) {
+        return `${snapshot.strategyName}.py`;
+    }
+
+    return "strategy.py";
+}
 
 export default async function StrategyRunPage({ params }) {
     const { runDirectory } = await params;
+    const snapshot = await loadRunSnapshot(runDirectory);
+    const strategyCode = snapshot?.strategyCode ?? buildFallbackCode(runDirectory);
 
     return (
         <AppShell activePath="/strategy">
@@ -46,32 +63,22 @@ export default async function StrategyRunPage({ params }) {
                             </div>
 
                             <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,rgba(10,21,38,0.86),rgba(8,16,30,0.95))] p-5 sm:p-6">
-                                <PnlPerformanceChart runDirectory={runDirectory} />
+                                <PnlPerformanceChart
+                                    runDirectory={runDirectory}
+                                    refreshToken={snapshot?.generatedAt ?? ""}
+                                />
                             </div>
                         </section>
 
-                        <StrategySummaryPanel runDirectory={runDirectory} />
+                        <StrategySummaryPanel key={`${runDirectory}-${snapshot?.generatedAt ?? "pending"}`} runDirectory={runDirectory} />
                     </div>
 
-                    <section className="glass-panel overflow-hidden">
-                        <div className="flex items-center justify-between border-b border-white/8 bg-white/4 px-6 py-4">
-                            <div>
-                                <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-blue-100/60">
-                                    Code
-                                </p>
-                                <h2 className="mt-2 text-xl font-semibold text-white">
-                                    Strategy
-                                </h2>
-                            </div>
-                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-                                Can edit
-                            </span>
-                        </div>
-
-                        <pre className="overflow-x-auto bg-slate-950/45 px-6 py-6 font-mono text-sm leading-7 text-slate-300">
-                            <code>{codePlaceholder}</code>
-                        </pre>
-                    </section>
+                    <StrategyCodeWorkbench
+                        runDirectory={runDirectory}
+                        initialCode={strategyCode}
+                        filename={getFilename(snapshot)}
+                        initialGeneratedAt={snapshot?.generatedAt ?? ""}
+                    />
                 </div>
             </section>
         </AppShell>
