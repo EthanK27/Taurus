@@ -13,10 +13,10 @@ import {
 import { AppShell } from "@/components/layout/app-shell";
 
 const suggestions = [
-    "Strategy 1",
-    "Strategy 2",
-    "Strategy 3",
-    "Strategy 4",
+    "Generate me a strategy to buy \"Company Name\" stock when it is at a month's low, and sell only at all time high for a one year ago to Feb 2026.",
+    "Generate me a strategy to buy \"Company Name\" stock on the 15th of every month, and sell on the first day of the next month from Jan 2024 to May 2026.",
+    "Generate me a strategy to buy \"ETF Trust\" every time the market drops more than \"X\"% in a day, and sell after holding for 30 days from \"##\" months ago to May 2026.",
+    "Generate me a strategy to sell \"Company Name\" stock if it increases more than \"X\"% in a day, only if you would gain a profit, from Aug 2023 to March 2026.",
 ];
 
 const historyItems = [
