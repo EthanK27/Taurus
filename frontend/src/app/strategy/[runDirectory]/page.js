@@ -26,6 +26,7 @@ export default async function StrategyRunPage({ params }) {
     const { runDirectory } = await params;
     const snapshot = await loadRunSnapshot(runDirectory);
     const strategyCode = snapshot?.strategyCode ?? buildFallbackCode(runDirectory);
+    const promptText = snapshot?.metadata?.prompt?.trim() || "Viewing the backtest generated for this run folder.";
 
     return (
         <AppShell activePath="/strategy">
@@ -41,8 +42,8 @@ export default async function StrategyRunPage({ params }) {
                             {runDirectory}
                         </h1>
 
-                        <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
-                            Viewing the backtest generated for this run folder.
+                        <p className="mt-4 max-w-3xl whitespace-pre-wrap text-base leading-8 text-slate-300 sm:text-lg">
+                            {promptText}
                         </p>
                     </div>
 

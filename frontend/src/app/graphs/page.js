@@ -10,7 +10,7 @@ export default function GraphsPage() {
                         <div>
                             <div>
                                 <h2 className="mt-3 text-3xl font-semibold text-white">
-                                    Alpha Graph Visualization
+                                    Performance Visualization Graph
                                 </h2>
                                 <p className="mt-3 text-base text-slate-300">
                                     Click on a strategy to view its performance graph compared to the S&amp;P 500
