@@ -1,6 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { AlphaBarChart } from "@/components/graphs/alpha-bar-chart";
-import { PnlPerformanceChart } from "@/components/graphs/pnl-performance-chart";
 
 export default function GraphsPage() {
     return (
@@ -25,10 +24,6 @@ export default function GraphsPage() {
 
                         <div className="mt-8 rounded-[30px] border border-white/6 bg-[linear-gradient(180deg,rgba(13,24,45,0.85),rgba(10,18,32,0.95))] p-5 sm:p-6">
                             <AlphaBarChart />
-                        </div>
-
-                        <div className="mt-8 rounded-[30px] border border-white/6 bg-[linear-gradient(180deg,rgba(10,21,38,0.86),rgba(8,16,30,0.95))] p-5 sm:p-6">
-                            <PnlPerformanceChart />
                         </div>
                     </section>
                 </div>

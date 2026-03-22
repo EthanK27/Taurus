@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { PnlPerformanceChart } from "@/components/graphs/pnl-performance-chart";
 
 const codePlaceholder = `// Strategy code will appear here
 if (ethan smith) {
@@ -41,8 +42,8 @@ export default function StrategyPage() {
                                 </span>
                             </div>
 
-                            <div className="flex min-h-90 items-center justify-center rounded-[28px] border border-dashed border-white/12 bg-slate-950/25 p-6 text-center text-sm text-slate-400">
-                                Graph here
+                            <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,rgba(10,21,38,0.86),rgba(8,16,30,0.95))] p-5 sm:p-6">
+                                <PnlPerformanceChart />
                             </div>
                         </section>
 
