@@ -162,9 +162,28 @@ def run_backtest(
         params=params,
     )
 
+    spy_curve = None
+    try:
+        spy_df = _fetch_historical_bars_df("SPY", timeframe, start, end, feed=feed, adjustment=adjustment)
+        if not spy_df.empty and len(result.equity_curve) > 0:
+            aligned_close = spy_df["close"].reindex(result.equity_curve.index).ffill().bfill()
+            if aligned_close.notna().any():
+                first_spy_close = float(aligned_close.dropna().iloc[0])
+                spy_shares = initial_cash / first_spy_close if first_spy_close else 0.0
+                spy_curve = pd.DataFrame(index=result.equity_curve.index)
+                spy_curve["equity"] = spy_shares * aligned_close
+    except Exception:
+        spy_curve = None
+
     prefix = f"{Path(strategy_path).stem}_{symbol}_{timeframe}_{start[:10]}_{end[:10]}"
     resolved_run_directory_name = run_directory_name or next_backtest_run_directory_name(settings.outputs_dir, symbol)
-    saved = save_backtest_report(result, settings.outputs_dir, prefix, resolved_run_directory_name)
+    saved = save_backtest_report(
+        result,
+        settings.outputs_dir,
+        prefix,
+        resolved_run_directory_name,
+        spy_benchmark_curve=spy_curve,
+    )
 
     return {
         "summary": result.summary,
