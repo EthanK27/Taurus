@@ -12,24 +12,7 @@ from google import genai
 from config import settings
 
 
-STRATEGY_ENVIRONMENT_GUIDE = """
-Strategy module contract:
-- Allowed imports: import pandas as pd, import numpy as np
-- Required function: generate_signals(df: pd.DataFrame, params: dict | None = None) -> pd.DataFrame
-- Input columns available on df: open, high, low, close, volume, and sometimes trade_count, vwap
-- Output must be a copy of df with a numeric signal column between 0 and 1
-- signal >= 0.5 means long; signal < 0.5 means flat
-- The backtester is long/flat only, no shorting and no leverage
-- Use vectorized pandas/numpy logic where possible
-- Use pandas Series operations for indicators and conditions
-- Do not call pandas methods like fillna on a raw numpy.ndarray result
-- If you use np.where for an intermediate value, wrap it in pd.Series(..., index=df.index)
-- Useful pandas/numpy operations include: rolling, ewm, shift, diff, pct_change, clip, fillna, np.where
-- Do not use file I/O, network calls, randomness, prints, or external TA libraries
-""".strip()
-
-
-_STRATEGY_SYSTEM_PROMPT = """
+_STRATEGY_RULES = """
 You write Python trading strategy modules for a local backtester.
 Return only raw Python code, with no markdown fences and no explanation.
 Rules:
@@ -45,6 +28,36 @@ Rules:
 - Use pandas Series operations for indicators and conditions
 - Do not call .fillna or other pandas methods on a raw numpy.ndarray
 - If you use np.where for an intermediate value, wrap it in pd.Series(..., index=df.index)
+""".strip()
+
+_EXAMPLE_STRATEGY_FILES = {
+    "sample_sma_crossover.py": Path(__file__).resolve().parent / "strategies" / "sample_sma_crossover.py",
+    "sample_weeklow_3dayhigh.py": Path(__file__).resolve().parent / "strategies" / "sample_weeklow_3dayhigh.py",
+}
+
+
+def _read_example_strategy(path: Path) -> str:
+    return path.read_text(encoding="utf-8").strip()
+
+
+_STRATEGY_EXAMPLES = """
+Example strategy file: sample_sma_crossover.py
+This is a simple moving-average crossover strategy. It computes a fast SMA and a slow SMA on close, sets signal to 1.0 when fast > slow, and otherwise sets signal to 0.0.
+{sample_sma_crossover}
+
+Example strategy file: sample_weeklow_3dayhigh.py
+This is a week-low / 3-day-high regime strategy. It tracks a rolling low and rolling high on close, goes long when price reaches the week low, goes flat when price reaches the three-day high, and forward-fills the signal between transitions.
+{sample_weeklow_3dayhigh}
+""".strip().format(
+    sample_sma_crossover=_read_example_strategy(_EXAMPLE_STRATEGY_FILES["sample_sma_crossover.py"]),
+    sample_weeklow_3dayhigh=_read_example_strategy(_EXAMPLE_STRATEGY_FILES["sample_weeklow_3dayhigh.py"]),
+)
+
+
+_STRATEGY_SYSTEM_PROMPT = f"""{_STRATEGY_RULES}
+
+Use these static strategy examples as style and logic references when helpful:
+{_STRATEGY_EXAMPLES}
 """.strip()
 
 
@@ -201,49 +214,3 @@ def generate_strategy_code(strategy_spec: str, strategy_name: str = "generated_s
         "strategy_path": str(path),
         "preview": "\n".join(code.splitlines()[:20]),
     }
-
-
-def generate_and_backtest_strategy(
-    strategy_spec: str,
-    symbol: str,
-    timeframe: str,
-    start: str,
-    end: str,
-    strategy_name: str = "generated_strategy",
-    initial_cash: float = 10_000.0,
-    commission_per_trade: float = 0.0,
-    slippage_bps: float = 0.0,
-    feed: str = "iex",
-    adjustment: str = "raw",
-    params_json: str = "{}",
-) -> dict[str, Any]:
-    """Generate a strategy file from a prompt and immediately run a local backtest."""
-    generated = generate_strategy_code(strategy_spec=strategy_spec, strategy_name=strategy_name)
-
-    from alpaca_tools import run_backtest
-
-    backtest = run_backtest(
-        strategy_path=generated["strategy_path"],
-        symbol=symbol,
-        timeframe=timeframe,
-        start=start,
-        end=end,
-        initial_cash=initial_cash,
-        commission_per_trade=commission_per_trade,
-        slippage_bps=slippage_bps,
-        feed=feed,
-        adjustment=adjustment,
-        params_json=params_json,
-    )
-    return {
-        "generated_strategy": generated,
-        "backtest": backtest,
-    }
-
-
-def list_strategies() -> dict[str, Any]:
-    """List strategy files currently saved in the local strategies directory."""
-    out_dir = Path(settings.strategies_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    files = sorted(str(p) for p in out_dir.glob("*.py"))
-    return {"strategies": files}

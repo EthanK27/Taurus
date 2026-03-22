@@ -52,6 +52,43 @@ def annualization_factor(index: pd.Index) -> float:
     return 252.0
 
 
+def _format_chart_timestamp(value: Any) -> str:
+    timestamp = pd.Timestamp(value)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.tz_localize("UTC")
+    else:
+        timestamp = timestamp.tz_convert("UTC")
+    return timestamp.strftime("%Y-%m-%d %H:%M")
+
+
+def _build_pnl_performance_log(
+    equity_curve: pd.DataFrame,
+    buy_hold_curve: pd.DataFrame,
+    summary: dict[str, Any],
+) -> dict[str, Any]:
+    user_series = [
+        {
+            "timestamp": _format_chart_timestamp(timestamp),
+            "pnl": round(float(row["equity"]), 2),
+        }
+        for timestamp, row in equity_curve.iterrows()
+    ]
+    benchmark_series = [
+        {
+            "timestamp": _format_chart_timestamp(timestamp),
+            "pnl": round(float(row["equity"]), 2),
+        }
+        for timestamp, row in buy_hold_curve.iterrows()
+    ]
+
+    return {
+        "generatedAt": pd.Timestamp.utcnow().isoformat(),
+        "summary": summary,
+        "userSeries": user_series,
+        "benchmarkSeries": benchmark_series,
+    }
+
+
 def compute_metrics(equity_curve: pd.DataFrame, buy_hold_curve: pd.DataFrame) -> dict[str, Any]:
     equity = equity_curve["equity"]
     returns = equity.pct_change().fillna(0.0)
@@ -202,13 +239,27 @@ def save_backtest_report(
     summary_path = output_dir / f"{prefix}_summary.json"
     equity_path = output_dir / f"{prefix}_equity.csv"
     trades_path = output_dir / f"{prefix}_trades.json"
+    pnl_log_path = output_dir / f"{prefix}_pnl_log.json"
 
     summary_path.write_text(json.dumps(result.summary, indent=2), encoding="utf-8")
     result.equity_curve.to_csv(equity_path)
     trades_path.write_text(json.dumps(result.trades, indent=2), encoding="utf-8")
 
+    if len(result.equity_curve) > 0:
+        first_close = float(result.equity_curve["close"].iloc[0])
+        initial_cash = float(result.summary.get("initial_cash", 10_000.0))
+        bh_shares = initial_cash / first_close if first_close else 0.0
+        buy_hold_curve = pd.DataFrame(index=result.equity_curve.index)
+        buy_hold_curve["equity"] = bh_shares * result.equity_curve["close"]
+    else:
+        buy_hold_curve = pd.DataFrame(columns=["equity"])
+
+    pnl_log = _build_pnl_performance_log(result.equity_curve, buy_hold_curve, result.summary)
+    pnl_log_path.write_text(json.dumps(pnl_log, indent=2), encoding="utf-8")
+
     return {
         "summary_path": str(summary_path),
         "equity_curve_path": str(equity_path),
         "trades_path": str(trades_path),
+        "pnl_log_path": str(pnl_log_path),
     }
