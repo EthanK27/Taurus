@@ -87,6 +87,10 @@ def _tool_declarations() -> list[types.Tool]:
                     "feed": {"type": "string", "description": "Usually iex or sip.", "default": "iex"},
                     "adjustment": {"type": "string", "description": "Bar adjustment mode.", "default": "raw"},
                     "params_json": {"type": "string", "description": "JSON object string passed to the strategy as params.", "default": "{}"},
+                    "run_directory_name": {
+                        "type": "string",
+                        "description": "Optional output folder name under outputs/. If omitted, the backend uses the next SYMBOL# directory.",
+                    },
                 },
                 "required": ["strategy_path", "symbol", "timeframe", "start", "end"],
             },

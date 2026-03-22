@@ -13,7 +13,11 @@ from alpaca.data.requests import (
 )
 from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 
-from backtester import run_long_flat_backtest, save_backtest_report
+from backtester import (
+    next_backtest_run_directory_name,
+    run_long_flat_backtest,
+    save_backtest_report,
+)
 from config import settings
 
 
@@ -125,6 +129,7 @@ def run_backtest(
     feed: str = "iex",
     adjustment: str = "raw",
     params_json: str = "{}",
+    run_directory_name: str | None = None,
 ) -> dict[str, Any]:
     """Run a local backtest using Alpaca historical bars and a saved strategy file.
 
@@ -143,6 +148,8 @@ def run_backtest(
         feed: Alpaca data feed, usually iex or sip.
         adjustment: Bar adjustment mode.
         params_json: JSON object string passed to the strategy as params.
+        run_directory_name: Optional output folder name under outputs/. When omitted, the backend
+            creates the next SYMBOL# directory such as GOOG1 or GOOG2.
     """
     params = json.loads(params_json or "{}")
     df = _fetch_historical_bars_df(symbol, timeframe, start, end, feed=feed, adjustment=adjustment)
@@ -156,10 +163,12 @@ def run_backtest(
     )
 
     prefix = f"{Path(strategy_path).stem}_{symbol}_{timeframe}_{start[:10]}_{end[:10]}"
-    saved = save_backtest_report(result, settings.outputs_dir, prefix)
+    resolved_run_directory_name = run_directory_name or next_backtest_run_directory_name(settings.outputs_dir, symbol)
+    saved = save_backtest_report(result, settings.outputs_dir, prefix, resolved_run_directory_name)
 
     return {
         "summary": result.summary,
+        "run_directory": resolved_run_directory_name,
         "artifacts": saved,
         "first_trade": result.trades[0] if result.trades else None,
         "last_trade": result.trades[-1] if result.trades else None,
