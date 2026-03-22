@@ -153,9 +153,18 @@ def run_backtest(
     """
     params = json.loads(params_json or "{}")
     df = _fetch_historical_bars_df(symbol, timeframe, start, end, feed=feed, adjustment=adjustment)
+    benchmark_df = _fetch_historical_bars_df(
+        "SPY",
+        "1Day",
+        start,
+        end,
+        feed=feed,
+        adjustment=adjustment,
+    )
     result = run_long_flat_backtest(
         bars=df,
         strategy_path=strategy_path,
+        benchmark_bars=benchmark_df,
         initial_cash=initial_cash,
         commission_per_trade=commission_per_trade,
         slippage_bps=slippage_bps,
