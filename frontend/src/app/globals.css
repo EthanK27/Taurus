@@ -226,8 +226,12 @@
       background-color: #60a5fa;
     }
 
-    .pnl-chart__legend-swatch--benchmark {
-      background-color: #f87171;
+    .pnl-chart__legend-swatch--buy-hold {
+      background-color: #f97316;
+    }
+
+    .pnl-chart__legend-swatch--spy {
+      background-color: #22c55e;
     }
 
     .pnl-chart__subtext {
