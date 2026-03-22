@@ -230,12 +230,11 @@ export default function Home() {
                         </p>
 
                         <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl md:text-6xl">
-                            Use plain English to build trading strategies
+                            Text-Based Trading Analysis & Automation
                         </h1>
 
                         <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
-                            Describe the idea. Taurus turns it into a backtest, compares it
-                            against the market, and returns results you can actually inspect.
+                            Describe the idea. Taurus turns it into an algorithm, backtests it against the market, and returns results you can actually inspect and iterate.
                         </p>
                     </div>
 
