@@ -134,6 +134,7 @@ def run_long_flat_backtest(
     strategy_path: str | Path,
     initial_cash: float = 10_000.0,
     commission_per_trade: float = 0.0,
+    benchmark_bars: pd.DataFrame | None = None,
     slippage_bps: float = 0.0,
     params: dict[str, Any] | None = None,
 ) -> BacktestResult:
