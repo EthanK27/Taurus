@@ -10,7 +10,7 @@ from google import genai
 from config import settings
 
 
-_STRATEGY_SYSTEM_PROMPT = """
+_STRATEGY_RULES = """
 You write Python trading strategy modules for a local backtester.
 Return only raw Python code, with no markdown fences and no explanation.
 Rules:
@@ -23,6 +23,36 @@ Rules:
 - No network calls, no file I/O, no randomness, no printing
 - Handle NaNs safely
 - Use vectorized pandas code where possible
+""".strip()
+
+_EXAMPLE_STRATEGY_FILES = {
+    "sample_sma_crossover.py": Path(__file__).resolve().parent / "strategies" / "sample_sma_crossover.py",
+    "sample_weeklow_3dayhigh.py": Path(__file__).resolve().parent / "strategies" / "sample_weeklow_3dayhigh.py",
+}
+
+
+def _read_example_strategy(path: Path) -> str:
+    return path.read_text(encoding="utf-8").strip()
+
+
+_STRATEGY_EXAMPLES = """
+Example strategy file: sample_sma_crossover.py
+This is a simple moving-average crossover strategy. It computes a fast SMA and a slow SMA on close, sets signal to 1.0 when fast > slow, and otherwise sets signal to 0.0.
+{sample_sma_crossover}
+
+Example strategy file: sample_weeklow_3dayhigh.py
+This is a week-low / 3-day-high regime strategy. It tracks a rolling low and rolling high on close, goes long when price reaches the week low, goes flat when price reaches the three-day high, and forward-fills the signal between transitions.
+{sample_weeklow_3dayhigh}
+""".strip().format(
+    sample_sma_crossover=_read_example_strategy(_EXAMPLE_STRATEGY_FILES["sample_sma_crossover.py"]),
+    sample_weeklow_3dayhigh=_read_example_strategy(_EXAMPLE_STRATEGY_FILES["sample_weeklow_3dayhigh.py"]),
+)
+
+
+_STRATEGY_SYSTEM_PROMPT = f"""{_STRATEGY_RULES}
+
+Use these static strategy examples as style and logic references when helpful:
+{_STRATEGY_EXAMPLES}
 """.strip()
 
 
@@ -76,11 +106,3 @@ def generate_strategy_code(strategy_spec: str, strategy_name: str = "generated_s
         "strategy_path": str(path),
         "preview": "\n".join(code.splitlines()[:20]),
     }
-
-
-def list_strategies() -> dict[str, Any]:
-    """List strategy files currently saved in the local strategies directory."""
-    out_dir = Path(settings.strategies_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    files = sorted(str(p) for p in out_dir.glob("*.py"))
-    return {"strategies": files}

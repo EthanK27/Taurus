@@ -8,45 +8,27 @@ from google import genai
 from google.genai import types
 
 from alpaca_tools import (
-    get_account_state,
-    get_historical_bars,
-    get_latest_market_data,
-    get_positions_and_orders,
     run_backtest,
-    submit_order,
 )
 from config import settings
-from strategy_tools import generate_strategy_code, list_strategies
+from strategy_tools import generate_strategy_code
 
 
 SYSTEM_PROMPT = """
 You are a trading strategy coding and backtesting assistant.
 Use the provided tools to:
 1. generate strategy code,
-2. inspect Alpaca market data,
-3. run local backtests,
-4. inspect Alpaca account and positions,
-5. place paper or live orders only when explicitly asked.
+2. run local backtests,
+3. report missing information when the user request is underspecified.
 
 Default behavior:
-- Prefer generating a strategy file and then running a backtest.
+- Always call given tools.
+- If the user request is missing required details, call report_missing_information and then respond with the tool's request_message, asking for the exact missing inputs instead of guessing.
+- Generate a strategy file and then run a backtest with the generated file.
+- Be very verbose and specific about the strategy spec in the generating the strategy file.
 - Use long/flat strategies for this local backtester.
-- When backtesting, mention the saved artifact paths.
-- Do not claim live performance from backtests.
 - If a tool error occurs, explain it briefly and continue where possible.
 """.strip()
-
-
-TOOL_MAP: dict[str, Callable[..., Any]] = {
-    "get_historical_bars": get_historical_bars,
-    "get_latest_market_data": get_latest_market_data,
-    "generate_strategy_code": generate_strategy_code,
-    "list_strategies": list_strategies,
-    "run_backtest": run_backtest,
-    "get_account_state": get_account_state,
-    "get_positions_and_orders": get_positions_and_orders,
-    "submit_order": submit_order,
-}
 
 
 def build_client() -> genai.Client:
@@ -58,33 +40,22 @@ def build_client() -> genai.Client:
 def _tool_declarations() -> list[types.Tool]:
     functions = [
         types.FunctionDeclaration(
-            name="get_historical_bars",
-            description="Fetch historical OHLCV bars from Alpaca for one stock symbol.",
+            name="report_missing_information",
+            description="Report that the user request is missing required details and request the exact information needed.",
             parameters_json_schema={
                 "type": "object",
                 "properties": {
-                    "symbol": {"type": "string", "description": "Ticker symbol like SPY or AAPL."},
-                    "timeframe": {"type": "string", "description": "One of 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day."},
-                    "start": {"type": "string", "description": "ISO datetime like 2024-01-01T00:00:00Z."},
-                    "end": {"type": "string", "description": "ISO datetime like 2025-01-01T00:00:00Z."},
-                    "feed": {"type": "string", "description": "Usually iex or sip.", "default": "iex"},
-                    "adjustment": {"type": "string", "description": "Usually raw, split, or all.", "default": "raw"},
-                    "preview_rows": {"type": "integer", "description": "Rows to preview.", "default": 5},
+                    "missing_information": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Specific pieces of information that are missing.",
+                    },
+                    "request_message": {
+                        "type": "string",
+                        "description": "Short response asking the user for the missing details.",
+                    },
                 },
-                "required": ["symbol", "timeframe", "start", "end"],
-            },
-        ),
-        types.FunctionDeclaration(
-            name="get_latest_market_data",
-            description="Fetch latest quote, trade, bar, or snapshot from Alpaca for one stock symbol.",
-            parameters_json_schema={
-                "type": "object",
-                "properties": {
-                    "symbol": {"type": "string", "description": "Ticker symbol like SPY or AAPL."},
-                    "data_type": {"type": "string", "description": "quote, trade, bar, or snapshot.", "default": "snapshot"},
-                    "feed": {"type": "string", "description": "Usually iex or sip.", "default": "iex"},
-                },
-                "required": ["symbol"],
+                "required": ["missing_information", "request_message"],
             },
         ),
         types.FunctionDeclaration(
@@ -100,24 +71,16 @@ def _tool_declarations() -> list[types.Tool]:
             },
         ),
         types.FunctionDeclaration(
-            name="list_strategies",
-            description="List strategy files currently saved in the local strategies directory.",
-            parameters_json_schema={
-                "type": "object",
-                "properties": {},
-            },
-        ),
-        types.FunctionDeclaration(
             name="run_backtest",
             description="Run a local backtest using Alpaca historical bars and a saved strategy file.",
             parameters_json_schema={
                 "type": "object",
                 "properties": {
                     "strategy_path": {"type": "string", "description": "Path to the Python strategy file."},
-                    "symbol": {"type": "string", "description": "Ticker symbol like SPY."},
-                    "timeframe": {"type": "string", "description": "One of 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day."},
-                    "start": {"type": "string", "description": "ISO datetime string."},
-                    "end": {"type": "string", "description": "ISO datetime string."},
+                    "symbol": {"type": "string", "description": "Ticker symbol like SPY. When given a company name, pick their most common ticker"},
+                    "timeframe": {"type": "string", "description": "One of 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day. When not provided by the user, choose 1Hour"},
+                    "start": {"type": "string", "description": "ISO datetime string. When not provided, should be last year from today."},
+                    "end": {"type": "string", "description": "ISO datetime string. When not provided, should be today."},
                     "initial_cash": {"type": "number", "description": "Starting cash.", "default": 10000.0},
                     "commission_per_trade": {"type": "number", "description": "Flat commission per entry/exit.", "default": 0.0},
                     "slippage_bps": {"type": "number", "description": "Slippage in basis points.", "default": 0.0},
@@ -128,45 +91,26 @@ def _tool_declarations() -> list[types.Tool]:
                 "required": ["strategy_path", "symbol", "timeframe", "start", "end"],
             },
         ),
-        types.FunctionDeclaration(
-            name="get_account_state",
-            description="Fetch core Alpaca account information useful before paper or live trading.",
-            parameters_json_schema={
-                "type": "object",
-                "properties": {},
-            },
-        ),
-        types.FunctionDeclaration(
-            name="get_positions_and_orders",
-            description="Fetch current positions and recent orders from Alpaca.",
-            parameters_json_schema={
-                "type": "object",
-                "properties": {
-                    "order_status": {"type": "string", "description": "open, closed, or all.", "default": "open"},
-                    "order_limit": {"type": "integer", "description": "Max number of orders to return.", "default": 20},
-                },
-            },
-        ),
-        types.FunctionDeclaration(
-            name="submit_order",
-            description="Submit a stock order to Alpaca.",
-            parameters_json_schema={
-                "type": "object",
-                "properties": {
-                    "symbol": {"type": "string", "description": "Ticker symbol to trade."},
-                    "side": {"type": "string", "description": "buy or sell."},
-                    "qty": {"type": "number", "description": "Share quantity."},
-                    "order_type": {"type": "string", "description": "market, limit, stop, or stop_limit.", "default": "market"},
-                    "time_in_force": {"type": "string", "description": "day, gtc, ioc, or fok.", "default": "day"},
-                    "limit_price": {"type": "number", "description": "Required for limit or stop_limit orders."},
-                    "stop_price": {"type": "number", "description": "Required for stop or stop_limit orders."},
-                    "extended_hours": {"type": "boolean", "description": "Whether the order may execute outside regular hours.", "default": False},
-                },
-                "required": ["symbol", "side", "qty"],
-            },
-        ),
     ]
     return [types.Tool(function_declarations=functions)]
+
+
+def report_missing_information(missing_information: list[str], request_message: str) -> dict[str, Any]:
+    """Print a missing-info error and return a user-facing request for the missing details."""
+    normalized = [item.strip() for item in missing_information if item and item.strip()]
+    print(f"NOT_ENOUGH_INFO: missing={normalized} request={request_message}")
+    return {
+        "status": "not_enough_info",
+        "missing_information": normalized,
+        "request_message": request_message,
+    }
+
+
+TOOL_MAP: dict[str, Callable[..., Any]] = {
+    "generate_strategy_code": generate_strategy_code,
+    "run_backtest": run_backtest,
+    "report_missing_information": report_missing_information,
+}
 
 
 def _extract_call_name(call: Any) -> str:
@@ -187,6 +131,7 @@ def _extract_call_args(call: Any) -> dict[str, Any]:
 
 def _dispatch_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     tool_fn = TOOL_MAP[name]
+    print(f"calling tool name={name}")
     try:
         result = tool_fn(**args)
         return {"result": result}
