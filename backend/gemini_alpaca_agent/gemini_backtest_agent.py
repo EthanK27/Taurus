@@ -27,6 +27,7 @@ Default behavior:
 - Generate a strategy file and then run a backtest with the generated file.
 - Be very verbose and specific about the strategy spec in the generating the strategy file.
 - Use long/flat strategies for this local backtester.
+- Even when a backtest is not requested, run the local backtest for the generated strategy file and report the backtest results, so the user can iteratively refine the strategy based on the backtest performance.
 - If a tool error occurs, explain it briefly and continue where possible.
 """.strip()
 
@@ -79,8 +80,8 @@ def _tool_declarations() -> list[types.Tool]:
                     "strategy_path": {"type": "string", "description": "Path to the Python strategy file."},
                     "symbol": {"type": "string", "description": "Ticker symbol like SPY. When given a company name, pick their most common ticker"},
                     "timeframe": {"type": "string", "description": "One of 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day. When not provided by the user, choose 1Hour"},
-                    "start": {"type": "string", "description": "ISO datetime string. When not provided, should be last year from today."},
-                    "end": {"type": "string", "description": "ISO datetime string. When not provided, should be today."},
+                    "start": {"type": "string", "description": "ISO datetime string. When not provided, should be one year before the end date"},
+                    "end": {"type": "string", "description": "ISO datetime string. When not provided, should be March 15th, 2026."},
                     "initial_cash": {"type": "number", "description": "Starting cash.", "default": 10000.0},
                     "commission_per_trade": {"type": "number", "description": "Flat commission per entry/exit.", "default": 0.0},
                     "slippage_bps": {"type": "number", "description": "Slippage in basis points.", "default": 0.0},
