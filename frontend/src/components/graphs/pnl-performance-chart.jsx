@@ -277,7 +277,7 @@ const mergeSeries = (userSeries, benchmarkSeries) => {
     }));
 };
 
-export function PnlPerformanceChart({ runDirectory }) {
+export function PnlPerformanceChart({ runDirectory, refreshToken = "" }) {
     const [rawData, setRawData] = useState({ user: [], benchmark: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -341,7 +341,7 @@ export function PnlPerformanceChart({ runDirectory }) {
         return () => {
             cancelled = true;
         };
-    }, [runDirectory]);
+    }, [runDirectory, refreshToken]);
 
     const data = rawData.user;
     const benchmarkData = rawData.benchmark;
@@ -498,7 +498,7 @@ export function PnlPerformanceChart({ runDirectory }) {
                 <div className="pnl-chart__subtext">
                     {formatPercent(pct)} over selected range
                     {showBenchmark
-                        ? ` • ${formatCurrency(benchmarkPnl)} for ${SERIES_LABELS.benchmark}`
+                        ? ` Ã¢â‚¬Â¢ ${formatCurrency(benchmarkPnl)} for ${SERIES_LABELS.benchmark}`
                         : ""}
                 </div>
             </div>

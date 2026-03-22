@@ -1,13 +1,53 @@
-import { AppShell } from "@/components/layout/app-shell";
+import { StrategyCodeWorkbench } from "@/components/code/strategy-code-workbench";
 import { PnlPerformanceChart } from "@/components/graphs/pnl-performance-chart";
+import { AppShell } from "@/components/layout/app-shell";
+import { loadRunSnapshot } from "@/lib/strategy-runs";
 
-const codePlaceholder = `// Strategy code will appear here
-if (ethan smith) {
-  return gay;
-}`;
+function formatCurrency(value) {
+    if (!Number.isFinite(value)) {
+        return "--";
+    }
+
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2,
+    }).format(value);
+}
+
+function formatPercent(value) {
+    if (!Number.isFinite(value)) {
+        return "--";
+    }
+
+    return `${value.toFixed(2)}%`;
+}
+
+function formatTimestamp(value) {
+    if (!value) {
+        return "Unavailable";
+    }
+
+    try {
+        return new Intl.DateTimeFormat("en-US", {
+            dateStyle: "medium",
+            timeStyle: "short",
+            timeZone: "UTC",
+        }).format(new Date(value));
+    } catch {
+        return "Unavailable";
+    }
+}
 
 export default async function StrategyRunPage({ params }) {
     const { runDirectory } = await params;
+    const snapshot = await loadRunSnapshot(runDirectory);
+    const summary = snapshot?.summary ?? {};
+    const strategyName = snapshot?.strategyName ?? "strategy";
+    const strategyCode =
+        snapshot?.strategyCode ??
+        "# Strategy source could not be resolved for this run.\n# Generate or rerun the backtest to save a matching strategy file.";
+    const alpha = Number(summary?.strategy_total_return_pct) - Number(summary?.buy_hold_return_pct);
 
     return (
         <AppShell activePath="/strategy">
@@ -24,7 +64,7 @@ export default async function StrategyRunPage({ params }) {
                         </h1>
 
                         <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
-                            Viewing the backtest generated for this run folder.
+                            Edit the saved strategy, rerun the same backtest, and inspect the refreshed graph and metrics.
                         </p>
                     </div>
 
@@ -45,7 +85,10 @@ export default async function StrategyRunPage({ params }) {
                             </div>
 
                             <div className="rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,rgba(10,21,38,0.86),rgba(8,16,30,0.95))] p-5 sm:p-6">
-                                <PnlPerformanceChart runDirectory={runDirectory} />
+                                <PnlPerformanceChart
+                                    runDirectory={runDirectory}
+                                    refreshToken={snapshot?.generatedAt ?? ""}
+                                />
                             </div>
                         </section>
 
@@ -60,10 +103,10 @@ export default async function StrategyRunPage({ params }) {
                             <div className="mt-6 space-y-4">
                                 <div className="rounded-[24px] border border-white/8 bg-white/3 p-4">
                                     <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
-                                        Run folder
+                                        Overview
                                     </p>
                                     <p className="mt-3 text-sm leading-7 text-slate-300">
-                                        {runDirectory}
+                                        {strategyName}.py linked to {runDirectory}. Last generated {formatTimestamp(snapshot?.generatedAt)}.
                                     </p>
                                 </div>
 
@@ -71,21 +114,39 @@ export default async function StrategyRunPage({ params }) {
                                     <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
                                         Metrics
                                     </p>
-                                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                         <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
                                             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                                                status
+                                                strategy return
                                             </p>
                                             <p className="mt-2 text-2xl font-semibold text-white">
-                                                Ready
+                                                {formatPercent(Number(summary?.strategy_total_return_pct))}
                                             </p>
                                         </div>
                                         <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
                                             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                                                source
+                                                alpha vs S&amp;P
                                             </p>
                                             <p className="mt-2 text-2xl font-semibold text-white">
-                                                Backtest
+                                                {formatPercent(alpha)}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
+                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                                                ending equity
+                                            </p>
+                                            <p className="mt-2 text-2xl font-semibold text-white">
+                                                {formatCurrency(Number(summary?.ending_equity))}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-2xl border border-white/8 bg-slate-950/25 px-4 py-3">
+                                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                                                trades
+                                            </p>
+                                            <p className="mt-2 text-2xl font-semibold text-white">
+                                                {Number.isFinite(Number(summary?.num_trades))
+                                                    ? Number(summary.num_trades)
+                                                    : "--"}
                                             </p>
                                         </div>
                                     </div>
@@ -101,17 +162,20 @@ export default async function StrategyRunPage({ params }) {
                                     Code
                                 </p>
                                 <h2 className="mt-2 text-xl font-semibold text-white">
-                                    Strategy
+                                    {strategyName}.py
                                 </h2>
                             </div>
                             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-                                Can edit
+                                Editable
                             </span>
                         </div>
 
-                        <pre className="overflow-x-auto bg-slate-950/45 px-6 py-6 font-mono text-sm leading-7 text-slate-300">
-                            <code>{codePlaceholder}</code>
-                        </pre>
+                        <StrategyCodeWorkbench
+                            runDirectory={runDirectory}
+                            initialCode={strategyCode}
+                            filename={`${strategyName}.py`}
+                            initialGeneratedAt={snapshot?.generatedAt ?? ""}
+                        />
                     </section>
                 </div>
             </section>
