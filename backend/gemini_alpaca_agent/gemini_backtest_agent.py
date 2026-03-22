@@ -16,31 +16,42 @@ from alpaca_tools import (
     submit_order,
 )
 from config import settings
-from strategy_tools import generate_strategy_code, list_strategies
+from strategy_tools import (
+    describe_strategy_environment,
+    generate_and_backtest_strategy,
+    generate_strategy_code,
+    list_strategies,
+)
 
 
 SYSTEM_PROMPT = """
 You are a trading strategy coding and backtesting assistant.
-Use the provided tools to:
-1. generate strategy code,
-2. inspect Alpaca market data,
-3. run local backtests,
-4. inspect Alpaca account and positions,
-5. place paper or live orders only when explicitly asked.
+You have tools for:
+1. describing the local strategy-building contract,
+2. generating strategy code as a local .py file,
+3. generating a strategy and backtesting it in one step,
+4. inspecting Alpaca market data,
+5. running local backtests,
+6. inspecting Alpaca account and positions,
+7. placing paper or live orders only when explicitly asked.
 
-Default behavior:
-- Prefer generating a strategy file and then running a backtest.
+Workflow rules:
+- For any request to create a new strategy and test it, prefer generate_and_backtest_strategy.
+- Use describe_strategy_environment whenever you need the exact strategy/backtester contract.
+- Use generate_strategy_code only when the user wants strategy code without an immediate backtest.
 - Use long/flat strategies for this local backtester.
-- When backtesting, mention the saved artifact paths.
+- Mention the saved strategy path and backtest artifact paths.
 - Do not claim live performance from backtests.
 - If a tool error occurs, explain it briefly and continue where possible.
 """.strip()
 
 
 TOOL_MAP: dict[str, Callable[..., Any]] = {
+    "describe_strategy_environment": describe_strategy_environment,
     "get_historical_bars": get_historical_bars,
     "get_latest_market_data": get_latest_market_data,
     "generate_strategy_code": generate_strategy_code,
+    "generate_and_backtest_strategy": generate_and_backtest_strategy,
     "list_strategies": list_strategies,
     "run_backtest": run_backtest,
     "get_account_state": get_account_state,
@@ -58,13 +69,21 @@ def build_client() -> genai.Client:
 def _tool_declarations() -> list[types.Tool]:
     functions = [
         types.FunctionDeclaration(
+            name="describe_strategy_environment",
+            description="Describe the exact strategy module contract, allowed imports, signal semantics, and backtester rules for building strategies that this project can execute.",
+            parameters_json_schema={
+                "type": "object",
+                "properties": {},
+            },
+        ),
+        types.FunctionDeclaration(
             name="get_historical_bars",
             description="Fetch historical OHLCV bars from Alpaca for one stock symbol.",
             parameters_json_schema={
                 "type": "object",
                 "properties": {
                     "symbol": {"type": "string", "description": "Ticker symbol like SPY or AAPL."},
-                    "timeframe": {"type": "string", "description": "One of 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day."},
+                    "timeframe": {"type": "string", "description": "Timeframe like 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day, daily, or hourly."},
                     "start": {"type": "string", "description": "ISO datetime like 2024-01-01T00:00:00Z."},
                     "end": {"type": "string", "description": "ISO datetime like 2025-01-01T00:00:00Z."},
                     "feed": {"type": "string", "description": "Usually iex or sip.", "default": "iex"},
@@ -89,7 +108,7 @@ def _tool_declarations() -> list[types.Tool]:
         ),
         types.FunctionDeclaration(
             name="generate_strategy_code",
-            description="Generate a Python strategy file from a natural-language trading strategy description.",
+            description="Generate a Python strategy file from a natural-language trading strategy description when the user wants code saved locally without immediately backtesting it.",
             parameters_json_schema={
                 "type": "object",
                 "properties": {
@@ -97,6 +116,28 @@ def _tool_declarations() -> list[types.Tool]:
                     "strategy_name": {"type": "string", "description": "File-friendly name for the strategy.", "default": "generated_strategy"},
                 },
                 "required": ["strategy_spec"],
+            },
+        ),
+        types.FunctionDeclaration(
+            name="generate_and_backtest_strategy",
+            description="Generate a Python strategy file from a natural-language strategy description and immediately run a local backtest with it. Prefer this when the user wants a new strategy created and tested from one prompt.",
+            parameters_json_schema={
+                "type": "object",
+                "properties": {
+                    "strategy_spec": {"type": "string", "description": "Natural-language description of the strategy logic."},
+                    "strategy_name": {"type": "string", "description": "File-friendly name for the strategy.", "default": "generated_strategy"},
+                    "symbol": {"type": "string", "description": "Ticker symbol like SPY."},
+                    "timeframe": {"type": "string", "description": "Timeframe like 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day, daily, or hourly."},
+                    "start": {"type": "string", "description": "ISO datetime string."},
+                    "end": {"type": "string", "description": "ISO datetime string."},
+                    "initial_cash": {"type": "number", "description": "Starting cash.", "default": 10000.0},
+                    "commission_per_trade": {"type": "number", "description": "Flat commission per entry/exit.", "default": 0.0},
+                    "slippage_bps": {"type": "number", "description": "Slippage in basis points.", "default": 0.0},
+                    "feed": {"type": "string", "description": "Usually iex or sip.", "default": "iex"},
+                    "adjustment": {"type": "string", "description": "Bar adjustment mode.", "default": "raw"},
+                    "params_json": {"type": "string", "description": "JSON object string passed to the strategy as params.", "default": "{}"},
+                },
+                "required": ["strategy_spec", "symbol", "timeframe", "start", "end"],
             },
         ),
         types.FunctionDeclaration(
@@ -115,7 +156,7 @@ def _tool_declarations() -> list[types.Tool]:
                 "properties": {
                     "strategy_path": {"type": "string", "description": "Path to the Python strategy file."},
                     "symbol": {"type": "string", "description": "Ticker symbol like SPY."},
-                    "timeframe": {"type": "string", "description": "One of 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day."},
+                    "timeframe": {"type": "string", "description": "Timeframe like 1Min, 5Min, 15Min, 30Min, 1Hour, 1Day, daily, or hourly."},
                     "start": {"type": "string", "description": "ISO datetime string."},
                     "end": {"type": "string", "description": "ISO datetime string."},
                     "initial_cash": {"type": "number", "description": "Starting cash.", "default": 10000.0},
